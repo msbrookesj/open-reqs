@@ -38,6 +38,7 @@ import math
 import os
 import re
 import smtplib
+import ssl
 import sys
 import textwrap
 import threading
@@ -57,6 +58,11 @@ import yaml
 SCRIPT_DIR = Path(__file__).parent
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
+
+# Allow unverified SSL for corporate proxy environments that intercept HTTPS
+_SSL_CTX = ssl.create_default_context()
+_SSL_CTX.check_hostname = False
+_SSL_CTX.verify_mode = ssl.CERT_NONE
 
 
 def _base_url() -> str:
@@ -163,7 +169,7 @@ def fetch_job_details(req_id: str, title_slug: str) -> dict:
             ),
         },
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, context=_SSL_CTX, timeout=30) as resp:
         html = resp.read().decode()
 
     m = re.search(
@@ -964,7 +970,7 @@ def search_jobs(query: str, location_keys: list[str], page: int = 1) -> dict:
         },
     )
 
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, context=_SSL_CTX, timeout=30) as resp:
         html = resp.read().decode()
 
     m = re.search(
