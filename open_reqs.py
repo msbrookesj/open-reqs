@@ -977,8 +977,11 @@ def _run_candidate_search_web(profile: dict, limit: int = 50) -> dict:
                 return []
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            for results in executor.map(_run_query, enumerate(queries, 1)):
-                all_jobs.extend(results)
+            futures = {executor.submit(_run_query, (i, q)): q
+                       for i, q in enumerate(queries, 1)}
+            for future in as_completed(futures):
+                jobs = future.result()
+                all_jobs.extend(jobs)
 
         # First pass: score by title/team
         for job in all_jobs:
