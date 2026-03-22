@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Search job listings for employee referrals.
+Search open job listings.
 
 Queries the jobs.apple.com API directly and displays matching roles
 with Req IDs, titles, teams, and direct links.
@@ -605,9 +605,9 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
     )
 
     if referrer_name and referrer_phone:
-        _cta_action = f'then text <a href="sms:{referrer_phone}" class="cta-link">{referrer_name}</a> which position(s) you applied to so they can submit an employee referral on your behalf.'
+        _cta_action = f'then text <a href="sms:{referrer_phone}" class="cta-link">{referrer_name}</a> which position(s) you applied to so they can submit a referral on your behalf.'
     elif referrer_name:
-        _cta_action = f'then let {referrer_name} know which position(s) you applied to so they can submit an employee referral on your behalf.'
+        _cta_action = f'then let {referrer_name} know which position(s) you applied to so they can submit a referral on your behalf.'
     else:
         _cta_action = None
     cta_html = f"""    <!-- Call to action -->
@@ -1077,7 +1077,7 @@ def run_server(port: int):
     import http.server
     import socketserver
 
-    web_dir = SCRIPT_DIR / "referral"
+    web_dir = SCRIPT_DIR / "web"
     index_path = web_dir / "index.html"
     if not index_path.exists():
         print(f"Web UI not found at {index_path}")
@@ -1143,7 +1143,7 @@ def run_server(port: int):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Search job listings for employee referrals",
+        description="Search open job listings",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             location codes:

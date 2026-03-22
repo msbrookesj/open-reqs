@@ -1,6 +1,6 @@
 # open-reqs
 
-Job search tool for employee referrals. Queries the `jobs.apple.com` API directly — no scraping, no third-party services.
+Tool for searching open job reqs. Queries the `jobs.apple.com` API directly — no scraping, no third-party services.
 
 ---
 
@@ -23,7 +23,7 @@ python open_reqs.py --serve
 
 ## Candidate profile search
 
-Run a multi-query, scored, deduplicated search tailored to a specific candidate. Each profile defines queries, boost/penalty keywords, preferred locations, and referral notes.
+Run a multi-query, scored, deduplicated search tailored to a specific candidate. Each profile defines queries, boost/penalty keywords, preferred locations, and notes.
 
 ```bash
 # Use the default profile (candidate_profile.yaml — Christine)
@@ -36,7 +36,7 @@ python open_reqs.py --candidate --profile kevin_katz_profile.yaml
 python open_reqs.py --candidate --limit 50 --json
 
 # Send results as an HTML email digest
-python open_reqs.py --candidate --email user@example.com --cc referrer@example.com
+python open_reqs.py --candidate --email user@example.com --cc contact@example.com
 ```
 
 ### Candidate profiles
@@ -54,7 +54,7 @@ Profiles are YAML files with these sections:
 - **boost_keywords** (strong / moderate / light) — terms that increase a job's relevance score
 - **penalty_keywords** (hard / soft) — terms that decrease relevance
 - **locations** — location codes to search
-- **referral_notes** — included in email digests
+- **notes** — included in email digests
 
 ### GitHub Actions workflows
 
@@ -66,7 +66,7 @@ Profiles are YAML files with these sections:
 | Simone's Job Search | `.github/workflows/simone-donelly-job-search.yml` | Manual dispatch only |
 | Yunjian's Job Search | `.github/workflows/yunjian-lu-job-search.yml` | Manual dispatch only |
 
-When triggered manually, workflows present a **dropdown** for the email recipient — choose the candidate's email, the referrer's email, or "none" to skip sending.
+When triggered manually, workflows present a **dropdown** for the email recipient — choose the candidate's email, the contact email, or "none" to skip sending.
 
 Email sending requires these repository secrets: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`.
 
