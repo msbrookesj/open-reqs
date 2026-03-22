@@ -586,6 +586,7 @@
 
     /* ── Resume / generate form ── */
     .resume-drop {
+      display: block;
       background: rgba(255,255,255,0.02);
       border: 1px dashed rgba(255,255,255,0.1);
       border-radius: 6px;
@@ -755,20 +756,20 @@
 
       <div class="divider"></div>
 
-      <div class="sec-label">Email &amp; Notifications <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-email"></span></div>
-      <div class="group-label">Candidate email</div>
-      <input class="field" id="f-email" type="email" placeholder="candidate@example.com" style="margin-bottom:7px;" />
-      <div class="group-label">Referrer email</div>
-      <input class="field" id="f-ref-email" type="email" placeholder="referrer@example.com" />
-
-      <div class="divider"></div>
-
       <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-referrer"></span></div>
       <input class="field" id="f-ref-name" type="text" placeholder="Referrer name..." style="margin-bottom:7px;" />
       <input class="field" id="f-ref-phone" type="text" placeholder="+1 (408) 555-0100" />
 
       <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-notes"></span></div>
       <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Email &amp; Notifications <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-email"></span></div>
+      <div class="group-label">Candidate email</div>
+      <input class="field" id="f-email" type="email" placeholder="candidate@example.com" style="margin-bottom:7px;" />
+      <div class="group-label">Referrer email</div>
+      <input class="field" id="f-ref-email" type="email" placeholder="referrer@example.com" />
 
       <div class="divider"></div>
 
@@ -783,7 +784,7 @@
       </div>
       <input class="field" id="f-cron" type="text" placeholder="37 20 * * *"
              style="margin-bottom:5px;font-family:monospace;" />
-      <div class="schedule-hint">e.g. daily at 12:37 PM PT = <code style="color:#6cb6ff;">37 20 * * *</code><br>Leave blank to disable the schedule.</div>
+      <div class="schedule-hint" id="cron-hint"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
         <button class="schedule-save-btn" id="schedule-save-btn">Save Schedule</button>
         <span id="schedule-status" style="font-size:10px;display:none;"></span>
@@ -1733,6 +1734,37 @@
     });
 
     // ── Schedule / workflow ───────────────────────────────────────────────────
+    // Returns a localized time string for a "minute hour * * *" cron expression,
+    // or null if the expression can't be parsed as a simple daily schedule.
+    function cronToLocalTimeStr(cronExpr) {
+      const parts = (cronExpr || '').trim().split(/\s+/);
+      if (parts.length < 2) return null;
+      const minute = parseInt(parts[0], 10);
+      const hour   = parseInt(parts[1], 10);
+      if (isNaN(minute) || isNaN(hour)) return null;
+      // Build a Date for today at the given UTC hour:minute
+      const d = new Date();
+      d.setUTCHours(hour, minute, 0, 0);
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    }
+
+    function updateCronHint() {
+      const cronVal = document.getElementById('f-cron').value.trim();
+      const hint = document.getElementById('cron-hint');
+      if (cronVal) {
+        const localTime = cronToLocalTimeStr(cronVal);
+        if (localTime) {
+          hint.innerHTML = `Fires daily at <strong style="color:#e8c84a;">${localTime}</strong> &nbsp;— Leave blank to disable.`;
+        } else {
+          hint.textContent = 'Leave blank to disable the schedule.';
+        }
+      } else {
+        const exampleTime = cronToLocalTimeStr('37 20 * * *');
+        const timeStr = exampleTime ? `${exampleTime}` : '12:37 PM PT';
+        hint.innerHTML = `e.g. daily at ${timeStr} = <code style="color:#6cb6ff;">37 20 * * *</code><br>Leave blank to disable the schedule.`;
+      }
+    }
+
     async function fetchWorkflowInfo(filename) {
       try {
         const res = await fetch(`/api/workflow/${encodeURIComponent(filename)}`);
@@ -1740,8 +1772,12 @@
         const data = await res.json();
         document.getElementById('schedule-no-workflow').style.display = data.exists ? 'none' : '';
         document.getElementById('f-cron').value = data.cron || '';
+        updateCronHint();
       } catch (_) {}
     }
+
+    document.getElementById('f-cron').addEventListener('input', updateCronHint);
+    updateCronHint();
 
     document.getElementById('schedule-save-btn').addEventListener('click', saveSchedule);
 
