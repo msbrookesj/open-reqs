@@ -94,7 +94,7 @@ def _oauth_register(redirect_uri: str) -> str:
     }).encode()
     req = urllib.request.Request(_OAUTH_REG_URL, data=body,
                                  headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, context=_SSL_CTX) as resp:
         return json.loads(resp.read())["client_id"]
 
 
@@ -110,7 +110,7 @@ def _oauth_exchange(code: str, verifier: str, client_id: str, redirect_uri: str)
     req = urllib.request.Request(_OAUTH_TOKEN_URL, data=body,
                                  headers={"Content-Type": "application/x-www-form-urlencoded"},
                                  method="POST")
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, context=_SSL_CTX) as resp:
         return json.loads(resp.read())
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
