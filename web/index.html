@@ -585,12 +585,6 @@
       width: 0%;
       transition: width 0.6s ease;
     }
-    .progress-phrase {
-      font-size: 13px;
-      color: #555;
-      min-height: 1.6em;
-      transition: opacity 0.3s ease;
-    }
   </style>
 </head>
 <body>
@@ -1267,43 +1261,14 @@
         ${sectionsHtml}`;
     }
 
-    // ── Encouraging phrases ───────────────────────────────────────────────────
-    const PHRASES = [
-      "Great things take a moment — your future is loading.",
-      "Scanning the horizon for your next opportunity.",
-      "Good things come to those who search with a well-tuned profile.",
-      "Your next team is out there. We'll find them.",
-      "Calculating compatibility scores across every open req.",
-      "Compiling opportunities from across the board.",
-      "The right role is closer than you think.",
-      "Hard work pays off. We're doing the hard part right now.",
-      "You bring the talent — we'll surface the match.",
-      "Sorting through the noise to find your signal.",
-      "Matching your skills to the opportunities that matter.",
-      "Every application is a step forward. Let's find the best ones.",
-      "Building your shortlist, one query at a time.",
-      "Fetching full job details for the top candidates.",
-      "Resume + hustle + a well-scored profile = unstoppable.",
-      "The best time to apply was yesterday. The second best is now.",
-      "Your next chapter is almost ready.",
-      "Making the job market a little less overwhelming, one search at a time.",
-      "Running all the queries in parallel. Speed is a form of kindness.",
-      "Opportunity is knocking. We're just opening the door.",
-      "Somewhere in here is the role you'll look back on as the turning point.",
-      "The search is doing the heavy lifting so you don't have to.",
-      "Great careers are built one carefully chosen role at a time.",
-    ];
-
     // ── Progress animation ────────────────────────────────────────────────────
     let _progressTimer = null;
-    let _phraseTimer   = null;
 
     function startProgress(candidateName) {
       document.getElementById('results-content').innerHTML = `
         <div class="progress-wrap">
           <div class="progress-name">Searching for ${esc(candidateName || 'candidate')}…</div>
           <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
-          <div class="progress-phrase" id="prog-phrase"></div>
         </div>`;
 
       let pct = 0;
@@ -1319,31 +1284,11 @@
         }
       }, 600);
 
-      // Rotate phrases
-      const used = new Set();
-      function nextPhrase() {
-        const el = document.getElementById('prog-phrase');
-        if (!el) return;
-        let pool = PHRASES.map((_, i) => i).filter(i => !used.has(i));
-        if (pool.length === 0) { used.clear(); pool = PHRASES.map((_, i) => i); }
-        const idx = pool[Math.floor(Math.random() * pool.length)];
-        used.add(idx);
-        el.style.opacity = '0';
-        setTimeout(() => {
-          const el2 = document.getElementById('prog-phrase');
-          if (el2) { el2.textContent = PHRASES[idx]; el2.style.opacity = '1'; }
-        }, 280);
-      }
-
-      nextPhrase();
-      _phraseTimer = setInterval(nextPhrase, 3800);
     }
 
     function stopProgress() {
       clearInterval(_progressTimer);
-      clearInterval(_phraseTimer);
       _progressTimer = null;
-      _phraseTimer   = null;
       const fill = document.getElementById('prog-fill');
       if (fill) fill.style.width = '100%';
     }
@@ -1492,7 +1437,6 @@
         <div class="progress-wrap">
           <div class="progress-name">Claude is analyzing the profile…</div>
           <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
-          <div class="progress-phrase" id="prog-phrase">Evaluating current results and search settings…</div>
         </div>`;
 
       // Animate the bar toward ~70% while waiting for Claude
