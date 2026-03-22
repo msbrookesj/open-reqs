@@ -71,6 +71,7 @@ except ImportError:
     _PYPDF_AVAILABLE = False
 
 SCRIPT_DIR = Path(__file__).parent
+PROFILES_DIR = SCRIPT_DIR / "profiles"
 
 # ── Local claude CLI ──────────────────────────────────────────────────────────
 _CLAUDE_BIN: str | None = shutil.which("claude")
@@ -222,7 +223,7 @@ def _write_workflow(profile_filename: str, profile: dict, cron: str) -> None:
             .replace("@@CANDIDATE_NAME@@", candidate_name)
             .replace("@@EMAIL_OPTIONS@@", email_opts)
             .replace("@@CRON@@", cron)
-            .replace("@@PROFILE_FILE@@", profile_filename)
+            .replace("@@PROFILE_FILE@@", f"profiles/{profile_filename}")
         )
         wf.write_text(content)
 
@@ -327,7 +328,7 @@ def _git_deploy() -> dict:
 
     # Stage relevant files selectively
     to_stage = (
-        list(SCRIPT_DIR.glob("*_profile.yaml")) +
+        list(PROFILES_DIR.glob("*_profile.yaml")) +
         list((SCRIPT_DIR / ".github" / "workflows").glob("*-job-search.yml"))
     )
     for f in to_stage:
@@ -387,7 +388,7 @@ DEFAULT_QUERY = "early career software engineer"
 
 def _load_candidate_profile(path: str | Path | None = None) -> dict:
     """Load candidate profile from a YAML file."""
-    profile_path = Path(path) if path else SCRIPT_DIR / "candidate_profile.yaml"
+    profile_path = Path(path) if path else PROFILES_DIR / "candidate_profile.yaml"
     with open(profile_path) as f:
         return yaml.safe_load(f)
 
@@ -1666,8 +1667,8 @@ def run_server(port: int):
             if self.path == "/api/locations":
                 self._json_ok({k: v["label"] for k, v in LOCATIONS.items()})
             elif self.path == "/api/profiles":
-                profiles = [p.name for p in sorted(SCRIPT_DIR.glob("*_profile.yaml"))]
-                if (SCRIPT_DIR / "candidate_profile.yaml").exists():
+                profiles = [p.name for p in sorted(PROFILES_DIR.glob("*_profile.yaml"))]
+                if (PROFILES_DIR / "candidate_profile.yaml").exists():
                     cdf = "candidate_profile.yaml"
                     if cdf not in profiles:
                         profiles.insert(0, cdf)
@@ -1678,7 +1679,7 @@ def run_server(port: int):
                     self.send_response(400)
                     self.end_headers()
                     return
-                profile_path = SCRIPT_DIR / filename
+                profile_path = PROFILES_DIR / filename
                 if not profile_path.exists():
                     self.send_response(404)
                     self.end_headers()
@@ -1760,7 +1761,7 @@ def run_server(port: int):
                         self._json_err(400, "invalid filename")
                         return
                     result = _generate_profile_from_resume(name, resume_text)
-                    profile_path = SCRIPT_DIR / filename
+                    profile_path = PROFILES_DIR / filename
                     with open(profile_path, "w") as f:
                         yaml.dump(result["profile"], f, default_flow_style=False,
                                   allow_unicode=True, sort_keys=False)
@@ -1818,7 +1819,7 @@ def run_server(port: int):
                     if not cron:
                         self._json_err(400, "cron required")
                         return
-                    profile_path = SCRIPT_DIR / filename
+                    profile_path = PROFILES_DIR / filename
                     profile_data = {}
                     if profile_path.exists():
                         with open(profile_path) as f:
@@ -1838,7 +1839,7 @@ def run_server(port: int):
                 body = self.rfile.read(content_len)
                 try:
                     data = json.loads(body)
-                    profile_path = SCRIPT_DIR / filename
+                    profile_path = PROFILES_DIR / filename
                     with open(profile_path, "w") as f:
                         yaml.dump(data, f, default_flow_style=False,
                                   allow_unicode=True, sort_keys=False)
@@ -1925,7 +1926,7 @@ def main():
               python open_reqs.py --candidate
               python open_reqs.py --candidate --limit 30 --json
               python open_reqs.py --candidate --email user@example.com
-              python open_reqs.py --candidate --profile kevin_katz_profile.yaml
+              python open_reqs.py --candidate --profile profiles/kevin_katz_profile.yaml
               python open_reqs.py --serve
         """),
     )
