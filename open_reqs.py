@@ -1528,8 +1528,17 @@ def run_server(port: int):
         if authed:
             print(f"  Claude Code: {version} ✓")
         else:
-            print(f"  Claude Code: {version} — not signed in")
-            print("  Run 'claude' once to complete sign-in before using AI Enhanced Search.\n")
+            print(f"  Claude Code: {version} — not signed in. Opening sign-in…")
+            subprocess.run([_CLAUDE_BIN, "auth", "login"], check=False)
+            # Re-check after login attempt
+            try:
+                authed = bool(json.loads(claude_json.read_text()).get("oauthAccount"))
+            except Exception:
+                pass
+            if authed:
+                print("  Claude Code: signed in ✓")
+            else:
+                print("  Warning: sign-in may not have completed — AI Enhanced Search may be unavailable.\n")
 
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
         print(f"\n  Job Search running at http://localhost:{port}")
