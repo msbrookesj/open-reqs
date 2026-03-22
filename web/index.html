@@ -6,310 +6,795 @@
   <title>Open Reqs</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       background: #0d0d0f;
       color: #e8e8e8;
       font-family: 'DM Mono', monospace;
-      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
     }
-    input:focus, button:focus { outline: none; }
+
+    input, button, select, textarea { font-family: inherit; }
+    input:focus, button:focus, select:focus, textarea:focus { outline: none; }
     a { color: #a8d8ff; text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    .container { max-width: 760px; margin: 0 auto; }
-
-    .badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(168,216,255,0.08); border: 1px solid rgba(168,216,255,0.15);
-      border-radius: 8px; padding: 4px 12px; margin-bottom: 16px;
-      font-size: 11px; color: #a8d8ff; letter-spacing: 0.1em; text-transform: uppercase;
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+      background: #0d0d0f;
     }
-    h1 { font-size: 28px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
-    .subtitle { margin-top: 8px; color: #666; font-size: 13px; }
+    .topbar-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .topbar-sub { font-size: 11px; color: #444; margin-top: 2px; }
 
-    .section-label {
-      font-size: 11px; color: #555; margin-bottom: 8px;
-      text-transform: uppercase; letter-spacing: 0.08em;
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
     }
 
-    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 290px;
+      flex-shrink: 0;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto;
+      padding: 14px 14px 24px;
+    }
+
+    .sec-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 14px 0 6px;
+    }
+    .sec-label:first-child { margin-top: 0; }
+
+    .group-label {
+      font-size: 10px;
+      color: #444;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    select.profile-select {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e8e8e8;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .field {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e8e8e8;
+      font-size: 12px;
+    }
+    .field:focus { border-color: rgba(168,216,255,0.35); }
+
+    textarea.field {
+      resize: vertical;
+      min-height: 72px;
+      line-height: 1.5;
+    }
+
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 14px 0; }
+
+    /* Location chips */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
     .chip {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      color: #888; border-radius: 8px; padding: 5px 12px; font-size: 12px;
-      cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #888;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.12s;
     }
     .chip:hover { border-color: rgba(255,255,255,0.2); color: #aaa; }
     .chip.active {
-      background: rgba(168,216,255,0.15); border-color: rgba(168,216,255,0.4); color: #a8d8ff;
+      background: rgba(168,216,255,0.14);
+      border-color: rgba(168,216,255,0.4);
+      color: #a8d8ff;
     }
 
-    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
-    .search-input {
-      flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 14px;
-      font-family: 'DM Mono', monospace;
+    /* Tag group */
+    .tag-group {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 7px 8px;
+      min-height: 38px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      cursor: text;
     }
-    .search-btn {
-      background: rgba(168,216,255,0.2); border: 1px solid rgba(168,216,255,0.3);
-      color: #a8d8ff; border-radius: 10px; padding: 12px 24px; font-size: 13px;
-      font-weight: 600; cursor: pointer; font-family: 'DM Mono', monospace; white-space: nowrap;
-    }
-    .search-btn:disabled { opacity: 0.4; cursor: default; }
-    .search-btn:not(:disabled):hover { background: rgba(168,216,255,0.3); }
+    .tag-group:focus-within { border-color: rgba(168,216,255,0.3); }
 
-    .divider { height: 1px; background: rgba(255,255,255,0.06); margin-bottom: 24px; }
+    .tag-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .tag-item .x {
+      cursor: pointer;
+      opacity: 0.55;
+      font-size: 13px;
+      line-height: 1;
+      margin-left: 1px;
+    }
+    .tag-item .x:hover { opacity: 1; }
 
-    .job-card {
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; transition: border-color 0.2s;
-    }
-    .job-card:hover { border-color: rgba(255,255,255,0.25); }
-    .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .job-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
-    .job-meta { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
-    .tag {
-      font-size: 11px; padding: 2px 8px; border-radius: 20px;
-      font-family: 'DM Mono', monospace;
-    }
-    .tag-team { background: rgba(168,216,255,0.12); color: #a8d8ff; }
-    .tag-loc { background: rgba(255,255,255,0.06); color: #aaa; }
-    .tag-date { background: rgba(255,255,255,0.06); color: #888; }
-    .req-id {
-      background: rgba(168,216,255,0.1); border: 1px solid rgba(168,216,255,0.2);
-      border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #a8d8ff;
-      white-space: nowrap; user-select: all; cursor: text; flex-shrink: 0;
+    .tag-add {
+      background: none;
+      border: none;
+      color: #e8e8e8;
+      font-size: 11px;
+      flex: 1;
+      min-width: 90px;
     }
 
-    .warning-box {
-      background: rgba(255,180,50,0.07); border: 1px solid rgba(255,180,50,0.2);
-      border-radius: 10px; padding: 16px 18px; color: #ffcc66; font-size: 13px; margin-bottom: 16px;
+    /* Tag colors */
+    .tg-neutral  { background: rgba(58,58,60,.8);   color: #d1d1d6; }
+    .tg-strong   { background: rgba(30,80,50,.65);  color: #7ee8a2; }
+    .tg-moderate { background: rgba(61,53,32,.8);   color: #e8c84a; }
+    .tg-light    { background: rgba(26,45,64,.8);   color: #6cb6ff; }
+    .tg-hard     { background: rgba(61,26,26,.85);  color: #f08080; }
+    .tg-soft     { background: rgba(61,26,26,.5);   color: #e8a0a0; }
+
+    /* Settings row */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #888;
     }
-    .warning-box strong { color: #ffcc66; }
-    .warning-box .detail { color: #aa8844; font-size: 12px; line-height: 1.6; margin-top: 6px; }
+    .settings-row input { width: 64px; }
+
+    /* Run button */
+    .run-btn {
+      background: rgba(168,216,255,0.18);
+      border: 1px solid rgba(168,216,255,0.3);
+      color: #a8d8ff;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .run-btn:disabled { opacity: 0.35; cursor: default; }
+    .run-btn:not(:disabled):hover { background: rgba(168,216,255,0.28); }
+
+    /* ── Results panel ── */
+    .results-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 40px;
+    }
+
+    .placeholder {
+      text-align: center;
+      padding: 80px 0;
+      color: #333;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .spinner {
+      text-align: center;
+      padding: 60px 0;
+      color: #555;
+      font-size: 13px;
+    }
 
     .error-box {
-      background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2);
-      border-radius: 10px; padding: 14px 18px; color: #ff8888; font-size: 13px; margin-bottom: 16px;
+      background: rgba(255,100,100,0.08);
+      border: 1px solid rgba(255,100,100,0.2);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #ff8888;
+      font-size: 13px;
     }
 
-    .status { margin-bottom: 16px; font-size: 13px; color: #555; }
-    .empty { text-align: center; padding: 60px 0; color: #333; font-size: 13px; }
-    .footer {
-      margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05);
-      padding-top: 20px; font-size: 11px; color: #333; text-align: center;
+    /* ── Result header ── */
+    .result-header {
+      background: linear-gradient(135deg, #1d1d1f 0%, #424245 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
     }
+    .result-header h2 { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+    .rh-date { color: #a1a1a6; font-size: 13px; }
+    .rh-byline { color: #a1a1a6; font-size: 12px; margin-top: 4px; }
+    .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .stat-box {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      text-align: center;
+      min-width: 60px;
+    }
+    .stat-n { color: #fff; font-size: 20px; font-weight: bold; }
+    .stat-l { color: #a1a1a6; font-size: 11px; }
+
+    /* ── Profile summary ── */
+    details.prof-summary { margin-bottom: 10px; }
+    details.prof-summary summary {
+      list-style: none;
+      text-align: center;
+      padding: 4px 0;
+      color: #555;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .prof-panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 6px;
+    }
+    .prof-panel h4 { font-size: 13px; color: #ccc; margin-bottom: 10px; }
+    .prof-row { margin-bottom: 9px; }
+    .prof-row-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; display: inline-block; }
+    .pill-loc    { background: #3b2d5e; color: #c4a8e8; }
+    .pill-neu    { background: #3a3a3c; color: #d1d1d6; }
+    .pill-good   { background: #1a3d2a; color: #7ee8a2; }
+    .pill-cau    { background: #3d3520; color: #e8c84a; }
+    .pill-info   { background: #1a2d40; color: #6cb6ff; }
+    .pill-bad    { background: #3d1a1a; color: #f08080; }
+    .ref-notes { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .ref-notes p { font-size: 13px; color: #bbb; line-height: 1.5; margin-top: 5px; }
+    .prof-note { font-size: 11px; color: #3a3a3c; font-style: italic; margin-top: 10px; }
+
+    /* ── CTA ── */
+    .cta-box {
+      background: rgba(26,45,64,0.75);
+      border: 1px solid rgba(45,90,138,0.5);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .cta-title { font-size: 14px; font-weight: 600; color: #6cb6ff; margin-bottom: 6px; }
+    .cta-text { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .cta-text a { color: #6cb6ff; }
+
+    /* ── Job sections ── */
+    .job-section { margin-bottom: 28px; }
+    .js-title { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+    .js-sub { font-size: 13px; color: #555; margin-bottom: 12px; }
+    .js-today { color: #3fb950; }
+    .js-week  { color: #6cb6ff; }
+    .js-older { color: #a1a1a6; }
+
+    /* ── Job card ── */
+    .job-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 9px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: border-color 0.15s;
+    }
+    .job-card:hover { border-color: rgba(255,255,255,0.18); }
+    .job-score {
+      min-width: 34px;
+      text-align: center;
+      font-size: 19px;
+      font-weight: bold;
+      padding-top: 1px;
+    }
+    .score-g { color: #3fb950; }
+    .score-a { color: #e8c84a; }
+    .score-r { color: #f08080; }
+    .job-body { flex: 1; min-width: 0; }
+    .job-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .job-title-link {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a8d8ff;
+      word-wrap: break-word;
+    }
+    .job-title-link:hover { text-decoration: underline; }
+    .exp-badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+    .bg-good { background: #1a3d2a; color: #7ee8a2; }
+    .bg-bad  { background: #3d1a1a; color: #f08080; }
+    .bg-neu  { background: #3a3a3c; color: #d1d1d6; }
+    .job-meta { font-size: 12px; color: #555; margin-top: 3px; }
+    .job-reasons { font-size: 11px; color: #444; margin-top: 3px; }
+    .trunc-note { font-size: 12px; color: #444; font-style: italic; margin-top: 8px; }
+
+    .no-results { text-align: center; padding: 40px 0; color: #333; font-size: 13px; }
   </style>
 </head>
 <body>
-  <div class="container" id="app">
-    <div style="margin-bottom: 32px;">
-      <div class="badge">Live · jobs.apple.com API</div>
-      <h1>Job Search</h1>
-      <p class="subtitle">Search, filter, and grab the Req ID</p>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Open Reqs</div>
+      <div class="topbar-sub">Candidate profile search with scored results</div>
+    </div>
+    <button class="run-btn" id="run-btn">Run Search →</button>
+  </div>
+
+  <!-- Two-column layout -->
+  <div class="layout">
+
+    <!-- Sidebar: profile editor -->
+    <div class="sidebar">
+
+      <div class="sec-label">Load Profile</div>
+      <select class="profile-select" id="profile-select">
+        <option value="">— select a profile —</option>
+      </select>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Candidate Name</div>
+      <input class="field" id="f-name" type="text" placeholder="Full name..." />
+
+      <div class="sec-label" style="margin-top:14px;">Locations</div>
+      <div class="chip-row" id="loc-chips"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Search Queries</div>
+      <div class="tag-group" id="tg-queries"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Boost Keywords</div>
+      <div class="group-label">Strong — confirmed skills</div>
+      <div class="tag-group" id="tg-boost-strong"></div>
+      <div class="group-label">Moderate — coursework &amp; resume</div>
+      <div class="tag-group" id="tg-boost-moderate"></div>
+      <div class="group-label">Light — adjacent interest</div>
+      <div class="tag-group" id="tg-boost-light"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Penalty Keywords</div>
+      <div class="group-label">Hard — disqualifiers</div>
+      <div class="tag-group" id="tg-penalty-hard"></div>
+      <div class="group-label">Soft — mild penalties</div>
+      <div class="tag-group" id="tg-penalty-soft"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Settings</div>
+      <div class="settings-row">
+        <span>Pages per query:</span>
+        <input class="field" id="f-pages" type="number" min="1" max="50" value="3" />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span></div>
+      <input class="field" id="f-ref-name" type="text" placeholder="Referrer name..." style="margin-bottom:7px;" />
+      <input class="field" id="f-ref-phone" type="text" placeholder="+1 (408) 555-0100" />
+
+      <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span></div>
+      <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
+
     </div>
 
-    <!-- Quick search chips -->
-    <div style="margin-bottom: 16px;">
-      <div class="section-label">Quick searches</div>
-      <div class="chip-row" id="keyword-chips"></div>
+    <!-- Results panel -->
+    <div class="results-panel" id="results-panel">
+      <div class="placeholder" id="placeholder">
+        Configure a candidate profile and click<br>
+        <strong style="color:#a8d8ff;">Run Search →</strong><br>
+        to see scored results.
+      </div>
     </div>
 
-    <!-- Search bar -->
-    <div class="search-row">
-      <input class="search-input" id="query-input" placeholder="e.g. early career backend engineer..." />
-      <button class="search-btn" id="search-btn">Search →</button>
-    </div>
-
-    <!-- Location chips -->
-    <div style="margin-bottom: 28px;">
-      <div class="section-label">Locations</div>
-      <div class="chip-row" id="location-chips"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Results -->
-    <div id="results"></div>
-
-    <div class="footer">
-      Req IDs are click-to-select. Links open the live job posting. Data is real-time from jobs.apple.com.<br>
-      Run via: <code>python open_reqs.py --serve</code>
-    </div>
   </div>
 
   <script>
-    const KEYWORDS = [
-      { label: "Early Career", value: "early career software engineer" },
-      { label: "Backend Engineer", value: "backend software engineer" },
-      { label: "iOS / Swift", value: "iOS swift engineer" },
-      { label: "IS&T Engineer", value: "IS&T software engineer" },
-      { label: "AiDP / AI Data", value: "AiDP AI data engineer" },
-      { label: "Data Analyst", value: "data analyst" },
-      { label: "SAP / Enterprise", value: "SAP enterprise systems" },
-      { label: "Python Engineer", value: "python software engineer" },
-    ];
+    // ── State ─────────────────────────────────────────────────────────────────
+    let profile = {
+      name: '',
+      locations: [],
+      queries: [],
+      boost_keywords: { strong: [], moderate: [], light: [] },
+      penalty_keywords: { hard: [], soft: [] },
+      pages_per_query: 3,
+      referrer_name: '',
+      referrer_phone: '',
+      referral_notes: '',
+    };
 
-    const LOCATIONS = [
-      { label: "Santa Clara Valley / Cupertino", value: "postLocation-SCV" },
-      { label: "Sunnyvale", value: "postLocation-SVL" },
-      { label: "Campbell / San Jose", value: "postLocation-SJOS" },
-      { label: "All US", value: "postLocation-USA" },
-      { label: "Austin", value: "postLocation-AUS" },
-      { label: "Seattle", value: "postLocation-SEA" },
-      { label: "New York City", value: "postLocation-NYC" },
-      { label: "San Diego", value: "postLocation-SDG" },
-    ];
+    let availableLocations = {};  // { code: label }
 
-    // Use local proxy when served from python open_reqs.py --serve
-    // Falls back to direct API call (will CORS-fail in browser without proxy)
-    const API_URL = window.location.hostname === "localhost"
-      ? "/api/role/search"
-      : "https://jobs.apple.com/api/role/search";
+    // ── Tag group component ───────────────────────────────────────────────────
+    const tagGroups = {};
 
-    let query = "early career software engineer";
-    let selectedLocations = new Set(["postLocation-SCV", "postLocation-SVL"]);
-    let loading = false;
-
-    const queryInput = document.getElementById("query-input");
-    const searchBtn = document.getElementById("search-btn");
-    const resultsDiv = document.getElementById("results");
-
-    queryInput.value = query;
-
-    // Render keyword chips
-    const kwContainer = document.getElementById("keyword-chips");
-    KEYWORDS.forEach(k => {
-      const btn = document.createElement("button");
-      btn.className = "chip" + (query === k.value ? " active" : "");
-      btn.textContent = k.label;
-      btn.onclick = () => {
-        query = k.value;
-        queryInput.value = query;
-        kwContainer.querySelectorAll(".chip").forEach(c =>
-          c.classList.toggle("active", c.textContent === k.label)
-        );
-      };
-      kwContainer.appendChild(btn);
-    });
-
-    // Render location chips
-    const locContainer = document.getElementById("location-chips");
-    LOCATIONS.forEach(l => {
-      const btn = document.createElement("button");
-      btn.className = "chip" + (selectedLocations.has(l.value) ? " active" : "");
-      btn.textContent = (selectedLocations.has(l.value) ? "✓ " : "") + l.label;
-      btn.onclick = () => {
-        if (selectedLocations.has(l.value)) {
-          selectedLocations.delete(l.value);
-        } else {
-          selectedLocations.add(l.value);
-        }
-        btn.className = "chip" + (selectedLocations.has(l.value) ? " active" : "");
-        btn.textContent = (selectedLocations.has(l.value) ? "✓ " : "") + l.label;
-      };
-      locContainer.appendChild(btn);
-    });
-
-    queryInput.addEventListener("input", e => { query = e.target.value; });
-    queryInput.addEventListener("keydown", e => { if (e.key === "Enter") search(); });
-    searchBtn.addEventListener("click", search);
-
-    function makeJobUrl(job) {
-      const reqId = job.positionId || job.id || "";
-      const title = (job.postingTitle || job.title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      return `https://jobs.apple.com/en-us/details/${reqId}/${title}`;
+    function setupTagGroup(id, getArr, setArr, style) {
+      const el = document.getElementById(id);
+      tagGroups[id] = { el, getArr, setArr, style };
+      el.addEventListener('click', () => {
+        const inp = el.querySelector('.tag-add');
+        if (inp) inp.focus();
+      });
+      renderTagGroup(id);
     }
 
-    async function search() {
-      if (!query.trim() || selectedLocations.size === 0 || loading) return;
-      loading = true;
-      searchBtn.disabled = true;
-      searchBtn.textContent = "Searching...";
-      resultsDiv.innerHTML = "";
+    function renderTagGroup(id) {
+      const { el, getArr, setArr, style } = tagGroups[id];
+      const items = getArr();
+      el.innerHTML = '';
+
+      items.forEach((item, i) => {
+        const span = document.createElement('span');
+        span.className = `tag-item tg-${style}`;
+        const txt = document.createTextNode(String(item));
+        const x = document.createElement('span');
+        x.className = 'x';
+        x.textContent = '×';
+        x.addEventListener('click', ev => {
+          ev.stopPropagation();
+          const arr = getArr().slice();
+          arr.splice(i, 1);
+          setArr(arr);
+          renderTagGroup(id);
+        });
+        span.appendChild(txt);
+        span.appendChild(x);
+        el.appendChild(span);
+      });
+
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'tag-add';
+      inp.placeholder = items.length === 0 ? 'Add...' : '';
+      inp.addEventListener('keydown', ev => {
+        if ((ev.key === 'Enter' || ev.key === ',') && inp.value.trim()) {
+          ev.preventDefault();
+          const val = inp.value.replace(/,/g, '').trim();
+          if (val) {
+            setArr([...getArr(), val]);
+            renderTagGroup(id);
+            setTimeout(() => {
+              const ni = document.getElementById(id).querySelector('.tag-add');
+              if (ni) ni.focus();
+            }, 0);
+          }
+        } else if (ev.key === 'Backspace' && !inp.value) {
+          const arr = getArr();
+          if (arr.length > 0) {
+            setArr(arr.slice(0, -1));
+            renderTagGroup(id);
+          }
+        }
+      });
+      el.appendChild(inp);
+    }
+
+    // ── Wire up tag groups ────────────────────────────────────────────────────
+    setupTagGroup('tg-queries',
+      () => profile.queries,
+      v => { profile.queries = v; },
+      'neutral');
+
+    setupTagGroup('tg-boost-strong',
+      () => profile.boost_keywords.strong,
+      v => { profile.boost_keywords.strong = v; },
+      'strong');
+
+    setupTagGroup('tg-boost-moderate',
+      () => profile.boost_keywords.moderate,
+      v => { profile.boost_keywords.moderate = v; },
+      'moderate');
+
+    setupTagGroup('tg-boost-light',
+      () => profile.boost_keywords.light,
+      v => { profile.boost_keywords.light = v; },
+      'light');
+
+    setupTagGroup('tg-penalty-hard',
+      () => profile.penalty_keywords.hard,
+      v => { profile.penalty_keywords.hard = v; },
+      'hard');
+
+    setupTagGroup('tg-penalty-soft',
+      () => profile.penalty_keywords.soft,
+      v => { profile.penalty_keywords.soft = v; },
+      'soft');
+
+    // ── Simple field bindings ─────────────────────────────────────────────────
+    document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; });
+    document.getElementById('f-pages').addEventListener('input', e => { profile.pages_per_query = parseInt(e.target.value) || 3; });
+    document.getElementById('f-ref-name').addEventListener('input', e => { profile.referrer_name = e.target.value; });
+    document.getElementById('f-ref-phone').addEventListener('input', e => { profile.referrer_phone = e.target.value; });
+    document.getElementById('f-notes').addEventListener('input', e => { profile.referral_notes = e.target.value; });
+
+    // ── Location chips ────────────────────────────────────────────────────────
+    function renderLocChips() {
+      const container = document.getElementById('loc-chips');
+      container.innerHTML = '';
+      Object.entries(availableLocations).forEach(([code, label]) => {
+        const btn = document.createElement('button');
+        btn.className = 'chip' + (profile.locations.includes(code) ? ' active' : '');
+        btn.textContent = label;
+        btn.title = code;
+        btn.addEventListener('click', () => {
+          const idx = profile.locations.indexOf(code);
+          if (idx >= 0) profile.locations.splice(idx, 1);
+          else profile.locations.push(code);
+          renderLocChips();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    // ── Load profile from server ──────────────────────────────────────────────
+    function applyProfile(data) {
+      profile.name             = data.name             || '';
+      profile.locations        = data.locations        || [];
+      profile.queries          = data.queries          || [];
+      profile.boost_keywords   = data.boost_keywords   || { strong: [], moderate: [], light: [] };
+      profile.penalty_keywords = data.penalty_keywords || { hard: [], soft: [] };
+      profile.pages_per_query  = data.pages_per_query  || 3;
+      profile.referrer_name    = data.referrer_name    || '';
+      profile.referrer_phone   = data.referrer_phone   || '';
+      profile.referral_notes   = data.referral_notes   || '';
+
+      document.getElementById('f-name').value       = profile.name;
+      document.getElementById('f-pages').value      = profile.pages_per_query;
+      document.getElementById('f-ref-name').value   = profile.referrer_name;
+      document.getElementById('f-ref-phone').value  = profile.referrer_phone;
+      document.getElementById('f-notes').value      = profile.referral_notes;
+
+      renderLocChips();
+      ['tg-queries','tg-boost-strong','tg-boost-moderate','tg-boost-light',
+       'tg-penalty-hard','tg-penalty-soft'].forEach(renderTagGroup);
+    }
+
+    async function loadProfile(filename) {
+      try {
+        const r = await fetch(`/api/profile/${encodeURIComponent(filename)}`);
+        if (r.ok) applyProfile(await r.json());
+      } catch (_) {}
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    function pills(arr, cls) {
+      return (arr || []).map(v => `<span class="pill ${cls}">${esc(String(v))}</span>`).join('');
+    }
+
+    function scoreClass(n) {
+      return n >= 70 ? 'score-g' : n >= 50 ? 'score-a' : 'score-r';
+    }
+
+    function badgeClass(tone) {
+      return tone === 'good' ? 'bg-good' : tone === 'bad' ? 'bg-bad' : 'bg-neu';
+    }
+
+    function jobCard(job) {
+      const badge = job.experienceLevel
+        ? `<span class="exp-badge ${badgeClass(job.levelTone)}">${esc(job.experienceLevel)}</span>`
+        : '';
+      const reasons = (job.detailReasons || []).length
+        ? `<div class="job-reasons">${esc(job.detailReasons.join(', '))}</div>`
+        : '';
+      return `
+        <div class="job-card">
+          <div class="job-score ${scoreClass(job.score)}">${job.score}</div>
+          <div class="job-body">
+            <div class="job-title-row">
+              <a href="${esc(job.url)}" target="_blank" rel="noopener noreferrer" class="job-title-link">${esc(job.title)}</a>
+              ${badge}
+            </div>
+            <div class="job-meta">${esc(job.reqId)} · ${esc(job.team)}</div>
+            <div class="job-meta">${esc(job.location)} · ${esc(job.postingDate)}</div>
+            ${reasons}
+          </div>
+        </div>`;
+    }
+
+    function section(title, sub, jobs, cls, max = 10) {
+      if (!jobs.length) return '';
+      const shown = jobs.slice(0, max);
+      const hidden = jobs.length - shown.length;
+      return `
+        <div class="job-section">
+          <div class="js-title ${cls}">${esc(title)}</div>
+          <div class="js-sub">${esc(sub)}</div>
+          ${shown.map(jobCard).join('')}
+          ${hidden > 0 ? `<div class="trunc-note">Showing top ${max} of ${jobs.length} matches.</div>` : ''}
+        </div>`;
+    }
+
+    // ── Render full results ───────────────────────────────────────────────────
+    function renderResults(d) {
+      const name = d.candidateName || '';
+      const prof = d.profile || {};
+      const ref  = d.referrer || {};
+      const secs = d.sections || {};
+
+      // Header
+      const byline = ref.name
+        ? `<div class="rh-byline">Curated by ${esc(ref.name)} for ${esc(name)}</div>` : '';
+
+      // Profile summary
+      const allPenalties = [...(prof.penalties?.hard || []), ...(prof.penalties?.soft || [])];
+      const refNotesHtml = prof.referralNotes
+        ? `<div class="ref-notes">
+             <div class="prof-row-label">Referral Notes</div>
+             <p>${esc(prof.referralNotes)}</p>
+           </div>` : '';
+
+      const profSummary = `
+        <div class="prof-row"><div class="prof-row-label">Locations</div><div class="pill-row">${pills(prof.locations, 'pill-loc')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Search Queries</div><div class="pill-row">${pills(prof.queries, 'pill-neu')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Filters</div><div class="pill-row">
+          <span class="pill pill-neu">min score: ${prof.filters?.minScore ?? ''}</span>
+          <span class="pill pill-neu">pages per query: ${prof.filters?.pagesPerQuery ?? ''}</span>
+        </div></div>
+        <div class="prof-row"><div class="prof-row-label">Strong Fit</div><div class="pill-row">${pills(prof.boosts?.strong, 'pill-good')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Moderate Fit</div><div class="pill-row">${pills(prof.boosts?.moderate, 'pill-cau')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Light Boost</div><div class="pill-row">${pills(prof.boosts?.light, 'pill-info')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Filtered Out</div><div class="pill-row">${pills(allPenalties, 'pill-bad')}</div></div>
+        ${refNotesHtml}
+        <p class="prof-note">This profile was generated collaboratively with AI powered by Claude.</p>`;
+
+      // CTA
+      let ctaHtml = '';
+      if (ref.name) {
+        const link = ref.phone
+          ? `text <a href="sms:${esc(ref.phone)}">${esc(ref.name)}</a>`
+          : esc(ref.name);
+        ctaHtml = `
+          <div class="cta-box">
+            <div class="cta-title">Interested in a role?</div>
+            <div class="cta-text">Apply directly on the jobs site as soon as possible, then ${link} which position(s) you applied to so they can submit a referral on your behalf.</div>
+          </div>`;
+      }
+
+      // Sections
+      const sectionsHtml = [
+        section('Best Fit — Posted Today',      `New listings from ${d.date}`,          secs.today     || [], 'js-today'),
+        section('Best Fit — Posted This Week',  'Listings from the past 7 days',         secs.this_week || [], 'js-week'),
+        section('All Open Positions',           'Older listings still worth a look',      secs.older     || [], 'js-older'),
+      ].filter(Boolean).join('') || '<div class="no-results">No matching roles found this run.</div>';
+
+      document.getElementById('results-panel').innerHTML = `
+        <div class="result-header">
+          <h2>Job Matches for ${esc(name)}</h2>
+          <div class="rh-date">${esc(d.date)}</div>
+          ${byline}
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-n">${d.stats.today}</div><div class="stat-l">Today</div></div>
+            <div class="stat-box"><div class="stat-n">${d.stats.week}</div><div class="stat-l">This Week</div></div>
+            <div class="stat-box"><div class="stat-n">${d.stats.total}</div><div class="stat-l">Total</div></div>
+          </div>
+        </div>
+
+        <details class="prof-summary">
+          <summary>View candidate profile for ${esc(name)} ▾</summary>
+          <div class="prof-panel">
+            <h4>Candidate Profile: ${esc(name)}</h4>
+            ${profSummary}
+          </div>
+        </details>
+
+        ${ctaHtml}
+        ${sectionsHtml}`;
+    }
+
+    // ── Run search ────────────────────────────────────────────────────────────
+    let searching = false;
+    const runBtn = document.getElementById('run-btn');
+
+    async function runSearch() {
+      if (searching) return;
+      searching = true;
+      runBtn.disabled = true;
+      runBtn.textContent = 'Searching...';
+      document.getElementById('results-panel').innerHTML =
+        `<div class="spinner">Running search for ${esc(profile.name || 'candidate')}…<br><span style="font-size:11px;color:#333;margin-top:8px;display:block;">This may take a minute.</span></div>`;
 
       try {
-        const payload = {
-          query: query.trim(),
-          locale: "en-us",
-          filters: { postingpostLocation: [...selectedLocations] },
-          page: 1,
-        };
-
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+        const res = await fetch('/api/candidate/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile),
         });
-
-        if (!res.ok) throw new Error(`API responded with ${res.status}`);
         const data = await res.json();
-
-        const jobs = data.searchResults || [];
-        const total = data.totalRecords || jobs.length;
-
-        if (jobs.length === 0) {
-          resultsDiv.innerHTML = '<div class="status">No results found.</div>';
+        if (!res.ok) {
+          document.getElementById('results-panel').innerHTML =
+            `<div class="error-box">Error: ${esc(data.error || res.statusText)}</div>`;
           return;
         }
-
-        resultsDiv.innerHTML = `<div class="status">Showing ${jobs.length} of ${total} results</div>`;
-
-        jobs.forEach(job => {
-          const reqId = job.positionId || job.id || "—";
-          const title = job.postingTitle || job.title || "Untitled";
-          const location = (job.locations || [])[0]?.name || "";
-          const team = (job.team || {}).teamName || "";
-          const posted = job.postingDate ? new Date(job.postingDate).toLocaleDateString() : "";
-          const url = makeJobUrl(job);
-
-          const card = document.createElement("div");
-          card.className = "job-card";
-          card.innerHTML = `
-            <div class="job-header">
-              <div style="flex:1">
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="job-title">${escapeHtml(title)}</a>
-                <div class="job-meta">
-                  ${team ? `<span class="tag tag-team">${escapeHtml(team)}</span>` : ""}
-                  <span class="tag tag-loc">${escapeHtml(location)}</span>
-                  ${posted ? `<span class="tag tag-date">${posted}</span>` : ""}
-                </div>
-              </div>
-              <div class="req-id">${escapeHtml(reqId)}</div>
-            </div>
-          `;
-          resultsDiv.appendChild(card);
-        });
-
+        renderResults(data);
       } catch (err) {
-        if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("CORS")) {
-          resultsDiv.innerHTML = `
-            <div class="warning-box">
-              <div style="font-weight:600;margin-bottom:6px">⚠ CORS blocked by the API</div>
-              <div class="detail">
-                The jobs API doesn't allow direct browser requests. Run the built-in proxy server instead:
-                <br><br>
-                <code style="color:#ffcc66">python open_reqs.py --serve</code>
-                <br><br>
-                Then open <a href="http://localhost:8080" style="color:#ffcc66">http://localhost:8080</a> in your browser.
-              </div>
-            </div>`;
-        } else {
-          resultsDiv.innerHTML = `<div class="error-box">⚠ ${escapeHtml(err.message)}</div>`;
-        }
+        document.getElementById('results-panel').innerHTML =
+          `<div class="error-box">Error: ${esc(err.message)}</div>`;
       } finally {
-        loading = false;
-        searchBtn.disabled = false;
-        searchBtn.textContent = "Search →";
+        searching = false;
+        runBtn.disabled = false;
+        runBtn.textContent = 'Run Search →';
       }
     }
 
-    function escapeHtml(str) {
-      const div = document.createElement("div");
-      div.textContent = str;
-      return div.innerHTML;
+    runBtn.addEventListener('click', runSearch);
+
+    document.getElementById('profile-select').addEventListener('change', e => {
+      if (e.target.value) loadProfile(e.target.value);
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+      try {
+        const [locsRes, profsRes] = await Promise.all([
+          fetch('/api/locations'),
+          fetch('/api/profiles'),
+        ]);
+        availableLocations = await locsRes.json();
+        const profiles = await profsRes.json();
+
+        const sel = document.getElementById('profile-select');
+        profiles.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f;
+          opt.textContent = f
+            .replace(/_profile\.yaml$/, '')
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+          sel.appendChild(opt);
+        });
+
+        renderLocChips();
+
+        if (profiles.length > 0) {
+          sel.value = profiles[0];
+          await loadProfile(profiles[0]);
+        }
+      } catch (err) {
+        console.warn('Init failed:', err);
+        renderLocChips();
+      }
     }
+
+    init();
   </script>
 </body>
 </html>

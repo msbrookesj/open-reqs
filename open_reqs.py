@@ -948,6 +948,146 @@ def run_candidate_search(location_keys: list[str], limit: int, as_json: bool,
     print()
 
 
+def _run_candidate_search_web(profile: dict, limit: int = 50) -> dict:
+    """Run a full candidate search for the web UI and return categorized scored results."""
+    global CANDIDATE_PROFILE
+    old_profile = CANDIDATE_PROFILE
+    CANDIDATE_PROFILE = profile
+    try:
+        location_keys = profile.get("locations", DEFAULT_LOCATIONS)
+        queries = profile.get("queries", [])
+        if not queries:
+            return {"error": "No queries in profile"}
+
+        pages_per_query = profile.get("pages_per_query", 3)
+        seen_ids: set[str] = set()
+        seen_ids_lock = threading.Lock()
+        all_jobs: list[dict] = []
+        max_workers = min(6, len(queries))
+
+        def _run_query(idx_query: tuple) -> list[dict]:
+            _, query = idx_query
+            try:
+                new_jobs, _, _ = _collect_results(
+                    query, location_keys, pages_per_query, seen_ids,
+                    seen_ids_lock=seen_ids_lock,
+                )
+                return new_jobs
+            except Exception:
+                return []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for results in executor.map(_run_query, enumerate(queries, 1)):
+                all_jobs.extend(results)
+
+        # First pass: score by title/team
+        for job in all_jobs:
+            job["_score"] = score_job(job)
+        all_jobs = [j for j in all_jobs if j["_score"] >= MIN_SCORE_THRESHOLD]
+        all_jobs.sort(key=lambda j: j["_score"], reverse=True)
+
+        # Second pass: fetch details for top candidates
+        candidates = all_jobs[:limit * 2]
+        if candidates:
+            def _fetch_detail(job: dict) -> None:
+                req_id = job.get("positionId") or job.get("id") or ""
+                title = job.get("postingTitle") or job.get("title") or ""
+                slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+                try:
+                    detail = fetch_job_details(req_id, slug)
+                    if detail:
+                        adj, reasons, exp_level = second_pass_score(detail)
+                        job["_score"] = max(0, min(100, job["_score"] + adj))
+                        job["_detail_reasons"] = reasons
+                        job["_experience_level"] = exp_level
+                except Exception:
+                    pass
+
+            with ThreadPoolExecutor(max_workers=min(10, len(candidates))) as executor:
+                list(executor.map(_fetch_detail, candidates))
+
+        # Re-filter and sort
+        all_jobs = [j for j in candidates if j["_score"] >= MIN_SCORE_THRESHOLD]
+        all_jobs.sort(key=lambda j: j["_score"], reverse=True)
+        shown = all_jobs[:limit]
+
+        # Categorize and serialize
+        now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=7)
+        preference = _profile_level_preference()
+
+        buckets: dict[str, list] = {"today": [], "this_week": [], "older": []}
+        for job in shown:
+            dt = _parse_posting_date(job)
+            if dt and dt >= today_start:
+                bucket = "today"
+            elif dt and dt >= week_start:
+                bucket = "this_week"
+            else:
+                bucket = "older"
+
+            exp = job.get("_experience_level", "")
+            if exp:
+                adj = _level_adjustment(exp, preference)
+                level_tone = "good" if adj > 0 else ("bad" if adj < 0 else "neutral")
+            else:
+                level_tone = ""
+
+            buckets[bucket].append({
+                "reqId": job.get("positionId") or job.get("id"),
+                "title": job.get("postingTitle") or job.get("title"),
+                "team": (job.get("team") or {}).get("teamName", ""),
+                "location": (job.get("locations") or [{}])[0].get("name", ""),
+                "postingDate": job.get("postingDate", ""),
+                "url": make_job_url(job),
+                "score": job.get("_score", 0),
+                "experienceLevel": exp,
+                "levelTone": level_tone,
+                "detailReasons": job.get("_detail_reasons", []),
+            })
+
+        today_date = datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%B %d, %Y")
+        location_labels = [LOCATIONS[k]["label"] for k in location_keys if k in LOCATIONS]
+        boosts = profile.get("boost_keywords", {})
+        penalties = profile.get("penalty_keywords", {})
+
+        return {
+            "candidateName": profile.get("name", ""),
+            "date": today_date,
+            "stats": {
+                "today": len(buckets["today"]),
+                "week": len(buckets["this_week"]),
+                "total": len(shown),
+            },
+            "profile": {
+                "locations": location_labels,
+                "queries": profile.get("queries", []),
+                "filters": {
+                    "minScore": MIN_SCORE_THRESHOLD,
+                    "pagesPerQuery": profile.get("pages_per_query", 3),
+                },
+                "boosts": {
+                    "strong": boosts.get("strong", []),
+                    "moderate": boosts.get("moderate", []),
+                    "light": boosts.get("light", []),
+                },
+                "penalties": {
+                    "hard": penalties.get("hard", []),
+                    "soft": penalties.get("soft", []),
+                },
+                "referralNotes": profile.get("referral_notes", ""),
+            },
+            "referrer": {
+                "name": profile.get("referrer_name", ""),
+                "phone": profile.get("referrer_phone", ""),
+            },
+            "sections": buckets,
+        }
+    finally:
+        CANDIDATE_PROFILE = old_profile
+
+
 def search_jobs(query: str, location_keys: list[str], page: int = 1) -> dict:
     """Search jobs by fetching the search page and extracting embedded data."""
     loc_slugs = [LOCATIONS[k]["slug"] for k in location_keys if k in LOCATIONS]
@@ -1093,6 +1233,49 @@ def run_server(port: int):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(web_dir), **kwargs)
 
+        def _json_ok(self, data: object) -> None:
+            body = json.dumps(data).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _json_err(self, status: int, message: str) -> None:
+            body = json.dumps({"error": message}).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path == "/api/locations":
+                self._json_ok({k: v["label"] for k, v in LOCATIONS.items()})
+            elif self.path == "/api/profiles":
+                profiles = [p.name for p in sorted(SCRIPT_DIR.glob("*_profile.yaml"))]
+                if (SCRIPT_DIR / "candidate_profile.yaml").exists():
+                    cdf = "candidate_profile.yaml"
+                    if cdf not in profiles:
+                        profiles.insert(0, cdf)
+                self._json_ok(profiles)
+            elif self.path.startswith("/api/profile/"):
+                filename = self.path[len("/api/profile/"):]
+                if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
+                    self.send_response(400)
+                    self.end_headers()
+                    return
+                profile_path = SCRIPT_DIR / filename
+                if not profile_path.exists():
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                with open(profile_path) as f:
+                    self._json_ok(yaml.safe_load(f))
+            else:
+                super().do_GET()
+
         def do_POST(self):
             if self.path == "/api/role/search":
                 content_len = int(self.headers.get("Content-Length", 0))
@@ -1122,6 +1305,14 @@ def run_server(port: int):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": str(e)}).encode())
+            elif self.path == "/api/candidate/search":
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    profile = json.loads(body)
+                    self._json_ok(_run_candidate_search_web(profile))
+                except Exception as e:
+                    self._json_err(502, str(e))
             else:
                 self.send_response(404)
                 self.end_headers()
@@ -1129,13 +1320,12 @@ def run_server(port: int):
         def do_OPTIONS(self):
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
         def log_message(self, format, *args):
-            # Quieter logging
-            if "POST" in str(args):
+            if "/api/" in str(args):
                 print(f"  [proxy] {args[0]}")
 
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
