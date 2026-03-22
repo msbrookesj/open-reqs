@@ -38,6 +38,13 @@ Key JS components:
 - **`showStagedChanges` / `applyStagedChanges` / `dismissStagedChanges`** — consent flow for AI proposals
 - **`buildProfileDiff` / `renderDiffHtml`** — generates the field-by-field diff shown in the staged panel
 - **`updateAiBtn()`** — enables/disables and relabels the Enhance button based on whether results exist and whether feedback was typed
+- **`generateFromResume()` / `createBlankProfile()`** — new-profile form: calls `/api/profile/generate` (Claude CLI) or creates a blank YAML; POSTs to `/api/profile/<file>` and loads the result
+- **`handleResumeFile(file)`** — reads a dropped/selected PDF or .txt file; POSTs to `/api/profile/extract-pdf` for PDFs, reads directly for .txt; populates the resume textarea
+- **`fetchWorkflowInfo(filename)`** — GETs `/api/workflow/<file>`, populates the cron field and calls `updateCronHint()`
+- **`cronToLocalTimeStr(cronExpr)` / `updateCronHint()`** — parses a `minute hour * * *` expression and displays the equivalent local time using `Date.toLocaleTimeString()`; updates live as the user types
+- **`saveSchedule()`** — PUTs to `/api/workflow/<file>` with the cron string; creates or patches the GitHub Actions workflow file
+- **`refreshGitStatus()`** — GETs `/api/git/status`, populates the topbar git indicator (modified files / commits ahead)
+- **`gitDeploy()`** — POSTs to `/api/git/deploy`; stages profile YAMLs + workflow files, commits, and pushes to `origin/main`
 
 ### API endpoints (served by `ProxyHandler`)
 
@@ -47,9 +54,15 @@ Key JS components:
 | GET | `/api/profiles` | Lists `*_profile.yaml` files in repo root |
 | GET | `/api/profile/<file>` | Returns parsed YAML for a profile |
 | PUT | `/api/profile/<file>` | Writes updated profile to disk |
+| POST | `/api/profile/generate` | Generates a new profile YAML from resume text via Claude CLI |
+| POST | `/api/profile/extract-pdf` | Extracts text from an uploaded PDF (requires `pypdf`) |
+| GET | `/api/workflow/<file>` | Returns `{exists, cron}` for the associated GitHub Actions workflow |
+| PUT | `/api/workflow/<file>` | Patches the cron expression in (or creates) the workflow file |
 | POST | `/api/candidate/search` | Runs full candidate search, returns categorized JSON |
 | POST | `/api/ai-enhance` | Calls Claude to propose profile improvements |
 | POST | `/api/role/search` | Single-query search (legacy) |
+| GET | `/api/git/status` | Returns `{changedFiles, commitsAhead}` for profile/workflow files |
+| POST | `/api/git/deploy` | Stages profile YAMLs + workflow files, commits, pushes to `origin/main` |
 
 ### Candidate profile YAML structure
 
@@ -84,10 +97,26 @@ Both the web search (`_run_candidate_search_web`) and the CLI search (`run_candi
 
 ## AI Enhancement
 
-`_ai_enhance_profile(profile, results, message)` calls `claude-opus-4-6` with adaptive thinking (`thinking: {"type": "adaptive"}`). It sends a compact profile summary + up to 30 top job results + optional user feedback, and expects a JSON response with `{explanation, profile}`. The `anthropic` package is imported with `try/except` so the server starts cleanly without it.
+All Claude calls go through `_run_via_claude_cli(prompt)` — a subprocess wrapper that invokes the local `claude` CLI (`claude -p --output-format json`). No Anthropic SDK dependency at runtime.
+
+- **`_ai_enhance_profile(profile, results, message)`** — sends a compact profile summary + up to 30 top job results + optional user feedback; expects `{explanation, profile}` JSON back
+- **`_generate_profile_from_resume(name, resume_text)`** — sends name + resume text; expects a fully populated profile YAML dict + explanation
+
+## Workflow management
+
+- **`_workflow_slug(profile_filename)`** — maps `kevin_katz_profile.yaml` → `kevin-katz`
+- **`_workflow_path(profile_filename)`** — returns `.github/workflows/<slug>-job-search.yml`
+- **`_get_workflow_info(profile_filename)`** — reads the workflow file and extracts the cron expression via regex
+- **`_write_workflow(profile_filename, profile, cron)`** — if the file exists, patches only the cron line; if new, fills `_WORKFLOW_TEMPLATE` using `@@PLACEHOLDER@@` substitution (avoids conflicts with `${{ }}` GitHub Actions syntax)
+
+## Git deploy
+
+- **`_git_status()`** — runs `git status --porcelain` + `git rev-list @{u}..HEAD --count`; returns `{changedFiles, commitsAhead}`
+- **`_git_deploy()`** — globs `*_profile.yaml` and `.github/workflows/*-job-search.yml`, stages them, commits, and pushes; never stages unrelated files
 
 ## Conventions
 
-- All profile reads/writes go through `loadedRawData` in the frontend — the full original YAML object is preserved on load and merged on save, so fields not shown in the UI (email, base_url, etc.) are never lost.
+- All profile reads/writes go through `loadedRawData` in the frontend — the full original YAML object is preserved on load and merged on save, so fields not shown in the UI (base_url, etc.) are never lost.
 - The global `CANDIDATE_PROFILE` in Python is swapped temporarily inside `_run_candidate_search_web` so scoring functions pick up the correct profile without threading issues (restored in a `finally` block).
-- GitHub Actions workflows only install `pyyaml` — the AI feature is web-UI-only and not needed in CI.
+- GitHub Actions workflows only install `pyyaml` — all AI and git features are web-UI-only and not needed in CI.
+- Cron schedules are always UTC. The web UI converts to the user's local timezone dynamically via `Date.toLocaleTimeString()` — never hardcode a timezone in the hint text.

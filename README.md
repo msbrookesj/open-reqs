@@ -38,7 +38,7 @@ Run `python open_reqs.py --serve` to start a local proxy server. The UI is a two
 - **Dirty indicators** — a small amber dot appears next to any section label whose fields differ from the saved state
 - **Tag groups** — Search Queries, Boost Keywords, and Penalty Keywords are editable inline tag inputs. New keywords (not yet saved) render **bold** at the top; removed keywords appear with ~~strikethrough~~ at the bottom and can be clicked to restore them.
 - **Email & Notifications** — candidate email and referrer email fields; saved to the profile YAML and used by GitHub Actions workflows
-- **Schedule** — configure the cron expression for the associated GitHub Actions workflow. Click **Save Schedule** to write the change to the workflow file; the top bar shows the deployment status
+- **Schedule** — configure the cron expression for the associated GitHub Actions workflow. The hint text shows the equivalent time in your local timezone (updates live as you type). Click **Save Schedule** to write the change to the workflow file; the top bar shows the deployment status
 
 ### AI Enhanced Search
 
