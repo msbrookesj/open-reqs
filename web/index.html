@@ -204,6 +204,18 @@
       color: #7ee8a2;
     }
 
+    /* Per-field dirty indicator */
+    .fdot {
+      display: none;
+      width: 5px;
+      height: 5px;
+      background: #e8c84a;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-left: 4px;
+      opacity: 0.9;
+    }
+
     /* AI enhance button */
     .ai-btn {
       width: 100%;
@@ -221,6 +233,82 @@
     }
     .ai-btn:disabled { opacity: 0.35; cursor: default; }
     .ai-btn:not(:disabled):hover { background: rgba(126,232,162,0.22); }
+
+    /* Staged changes panel */
+    .staged-panel {
+      background: rgba(20,35,50,0.7);
+      border: 1px solid rgba(168,216,255,0.18);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .staged-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .staged-hdr-label {
+      font-size: 10px;
+      color: #6cb6ff;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .staged-close {
+      background: none;
+      border: none;
+      color: #444;
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .staged-close:hover { color: #888; }
+    .staged-explain {
+      font-size: 11px;
+      color: #a8e6bb;
+      line-height: 1.55;
+      margin-bottom: 9px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .diff-group { margin-bottom: 6px; }
+    .diff-group-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 3px;
+    }
+    .diff-add { color: #7ee8a2; font-size: 11px; }
+    .diff-rm  { color: #f08080; font-size: 11px; }
+    .diff-scalar { color: #a8d8ff; font-size: 11px; }
+    .diff-none { color: #3a3a3c; font-size: 11px; font-style: italic; }
+    .staged-actions { display: flex; gap: 6px; margin-top: 9px; }
+    .apply-btn {
+      flex: 1;
+      background: rgba(126,232,162,0.15);
+      border: 1px solid rgba(126,232,162,0.3);
+      color: #7ee8a2;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .apply-btn:hover { background: rgba(126,232,162,0.25); }
+    .discard-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #555;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .discard-btn:hover { color: #999; border-color: rgba(255,255,255,0.18); }
 
     /* AI explanation banner */
     .ai-banner {
@@ -469,16 +557,16 @@
 
       <div class="divider"></div>
 
-      <div class="sec-label">Candidate Name</div>
+      <div class="sec-label">Candidate Name <span class="fdot" id="fdot-name"></span></div>
       <input class="field" id="f-name" type="text" placeholder="Full name..." />
 
-      <div class="sec-label" style="margin-top:14px;">Locations</div>
+      <div class="sec-label" style="margin-top:14px;">Locations <span class="fdot" id="fdot-loc"></span></div>
       <div class="chip-row" id="loc-chips"></div>
 
-      <div class="sec-label" style="margin-top:14px;">Search Queries</div>
+      <div class="sec-label" style="margin-top:14px;">Search Queries <span class="fdot" id="fdot-queries"></span></div>
       <div class="tag-group" id="tg-queries"></div>
 
-      <div class="sec-label" style="margin-top:14px;">Boost Keywords</div>
+      <div class="sec-label" style="margin-top:14px;">Boost Keywords <span class="fdot" id="fdot-boost"></span></div>
       <div class="group-label">Strong — confirmed skills</div>
       <div class="tag-group" id="tg-boost-strong"></div>
       <div class="group-label">Moderate — coursework &amp; resume</div>
@@ -486,13 +574,13 @@
       <div class="group-label">Light — adjacent interest</div>
       <div class="tag-group" id="tg-boost-light"></div>
 
-      <div class="sec-label" style="margin-top:14px;">Penalty Keywords</div>
+      <div class="sec-label" style="margin-top:14px;">Penalty Keywords <span class="fdot" id="fdot-penalty"></span></div>
       <div class="group-label">Hard — disqualifiers</div>
       <div class="tag-group" id="tg-penalty-hard"></div>
       <div class="group-label">Soft — mild penalties</div>
       <div class="tag-group" id="tg-penalty-soft"></div>
 
-      <div class="sec-label" style="margin-top:14px;">Settings</div>
+      <div class="sec-label" style="margin-top:14px;">Settings <span class="fdot" id="fdot-settings"></span></div>
       <div class="settings-row">
         <span>Pages per query:</span>
         <input class="field" id="f-pages" type="number" min="1" max="50" value="3" />
@@ -500,18 +588,33 @@
 
       <div class="divider"></div>
 
-      <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span></div>
+      <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-referrer"></span></div>
       <input class="field" id="f-ref-name" type="text" placeholder="Referrer name..." style="margin-bottom:7px;" />
       <input class="field" id="f-ref-phone" type="text" placeholder="+1 (408) 555-0100" />
 
-      <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span></div>
+      <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-notes"></span></div>
       <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
 
       <div class="divider"></div>
 
       <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
       <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
-      <button class="ai-btn" id="ai-btn">Enhance &amp; Search →</button>
+
+      <!-- Staged changes panel (hidden until AI returns a proposal) -->
+      <div class="staged-panel" id="staged-panel" style="display:none">
+        <div class="staged-hdr">
+          <span class="staged-hdr-label">Proposed Changes</span>
+          <button class="staged-close" id="staged-close" title="Dismiss">✕</button>
+        </div>
+        <div class="staged-explain" id="staged-explain"></div>
+        <div id="staged-diff"></div>
+        <div class="staged-actions">
+          <button class="apply-btn" id="apply-btn">Apply &amp; Search →</button>
+          <button class="discard-btn" id="discard-btn">Discard</button>
+        </div>
+      </div>
+
+      <button class="ai-btn" id="ai-btn">Enhance</button>
 
     </div>
 
@@ -535,6 +638,42 @@
     const saveBtn = document.getElementById('save-btn');
     const dirtyDot = document.getElementById('dirty-dot');
 
+    // ── Per-field dirty tracking ──────────────────────────────────────────────
+    function computeDirtyFields() {
+      if (!loadedRawData) return new Set();
+      const d = new Set();
+      const arrEq = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+
+      if ((profile.name || '') !== (loadedRawData.name || '')) d.add('name');
+      if (!arrEq(profile.locations, loadedRawData.locations)) d.add('loc');
+
+      if (!arrEq(profile.queries, loadedRawData.queries)) d.add('queries');
+
+      const b = profile.boost_keywords || {}, lb = loadedRawData.boost_keywords || {};
+      if (!arrEq(b.strong, lb.strong) || !arrEq(b.moderate, lb.moderate) ||
+          !arrEq(b.light, lb.light)) d.add('boost');
+
+      const p = profile.penalty_keywords || {}, lp = loadedRawData.penalty_keywords || {};
+      if (!arrEq(p.hard, lp.hard) || !arrEq(p.soft, lp.soft)) d.add('penalty');
+
+      if ((profile.pages_per_query || 3) !== (loadedRawData.pages_per_query || 3)) d.add('settings');
+
+      if ((profile.referrer_name || '') !== (loadedRawData.referrer_name || '') ||
+          (profile.referrer_phone || '') !== (loadedRawData.referrer_phone || '')) d.add('referrer');
+
+      if ((profile.referral_notes || '') !== (loadedRawData.referral_notes || '')) d.add('notes');
+
+      return d;
+    }
+
+    function refreshDirtyDots() {
+      const d = computeDirtyFields();
+      ['name','loc','queries','boost','penalty','settings','referrer','notes'].forEach(k => {
+        const el = document.getElementById('fdot-' + k);
+        if (el) el.style.display = d.has(k) ? 'inline-block' : 'none';
+      });
+    }
+
     function markDirty() {
       if (!currentFile) return;
       dirty = true;
@@ -542,6 +681,7 @@
       saveBtn.className = 'save-btn dirty';
       saveBtn.textContent = 'Save';
       dirtyDot.style.display = '';
+      refreshDirtyDots();
     }
 
     function markClean() {
@@ -549,6 +689,7 @@
       saveBtn.disabled = true;
       saveBtn.className = 'save-btn';
       dirtyDot.style.display = 'none';
+      refreshDirtyDots();
     }
 
     let profile = {
@@ -1002,7 +1143,7 @@
     let searching = false;
     const runBtn = document.getElementById('run-btn');
 
-    async function runSearch() {
+    async function runSearch(aiExplanation = '') {
       if (searching) return;
       searching = true;
       runBtn.disabled = true;
@@ -1023,7 +1164,8 @@
           return;
         }
         lastResults = data;
-        renderResults(data);
+        updateAiBtn();
+        renderResults(data, aiExplanation);
       } catch (err) {
         stopProgress();
         document.getElementById('results-panel').innerHTML =
@@ -1035,30 +1177,115 @@
       }
     }
 
-    runBtn.addEventListener('click', runSearch);
+    runBtn.addEventListener('click', () => runSearch());
 
     // ── AI Enhanced Search ────────────────────────────────────────────────────
-    let lastResults = null;  // keep track of previous results for context
+    let lastResults = null;
+    let pendingProfile = null;
+    let pendingExplanation = '';
 
     const aiBtn = document.getElementById('ai-btn');
 
+    function updateAiBtn() {
+      aiBtn.textContent = lastResults ? 'Enhance from Results' : 'Enhance';
+    }
+
+    // ── Profile diff helpers ──────────────────────────────────────────────────
+    function buildProfileDiff(oldP, newP) {
+      const groups = [];
+      function arrDiff(label, a, b) {
+        a = a || []; b = b || [];
+        const added   = b.filter(x => !a.includes(x));
+        const removed = a.filter(x => !b.includes(x));
+        if (added.length || removed.length) groups.push({ label, added, removed });
+      }
+      arrDiff('Locations',       oldP.locations,                         newP.locations);
+      arrDiff('Search Queries',  oldP.queries,                           newP.queries);
+      const ob = oldP.boost_keywords || {}, nb = newP.boost_keywords || {};
+      arrDiff('Boost — Strong',   ob.strong,   nb.strong);
+      arrDiff('Boost — Moderate', ob.moderate, nb.moderate);
+      arrDiff('Boost — Light',    ob.light,    nb.light);
+      const op = oldP.penalty_keywords || {}, np = newP.penalty_keywords || {};
+      arrDiff('Penalty — Hard',  op.hard,  np.hard);
+      arrDiff('Penalty — Soft',  op.soft,  np.soft);
+      const opq = oldP.pages_per_query || 3, npq = newP.pages_per_query || 3;
+      if (opq !== npq) groups.push({ label: 'Pages per Query', scalar: `${opq} → ${npq}` });
+      return groups;
+    }
+
+    function renderDiffHtml(groups) {
+      if (!groups.length) return '<div class="diff-none">No changes proposed.</div>';
+      return groups.map(g => {
+        let rows = '';
+        if (g.scalar !== undefined) {
+          rows = `<div class="diff-scalar">${esc(g.scalar)}</div>`;
+        } else {
+          rows += g.added.map(x => `<div class="diff-add">+ ${esc(x)}</div>`).join('');
+          rows += g.removed.map(x => `<div class="diff-rm">− ${esc(x)}</div>`).join('');
+        }
+        return `<div class="diff-group"><div class="diff-group-label">${esc(g.label)}</div>${rows}</div>`;
+      }).join('');
+    }
+
+    // ── Staged changes (consent flow) ────────────────────────────────────────
+    function showStagedChanges(explanation, proposedProfile) {
+      pendingProfile = proposedProfile;
+      pendingExplanation = explanation;
+
+      document.getElementById('staged-explain').textContent = explanation;
+      document.getElementById('staged-diff').innerHTML =
+        renderDiffHtml(buildProfileDiff(profile, proposedProfile));
+      document.getElementById('staged-panel').style.display = '';
+      aiBtn.style.display = 'none';
+    }
+
+    function dismissStagedChanges() {
+      pendingProfile = null;
+      pendingExplanation = '';
+      document.getElementById('staged-panel').style.display = 'none';
+      aiBtn.style.display = '';
+    }
+
+    function applyStagedChanges() {
+      if (!pendingProfile) return;
+      const explanation = pendingExplanation;
+      applyProfile({ ...loadedRawData, ...pendingProfile });
+      markDirty();
+      dismissStagedChanges();
+      runSearch(explanation);
+    }
+
+    document.getElementById('apply-btn').addEventListener('click', applyStagedChanges);
+    document.getElementById('discard-btn').addEventListener('click', dismissStagedChanges);
+    document.getElementById('staged-close').addEventListener('click', dismissStagedChanges);
+
+    // ── Call /api/ai-enhance, then show staged panel ──────────────────────────
     async function aiEnhanceAndSearch() {
       if (searching) return;
       searching = true;
       runBtn.disabled = true;
       aiBtn.disabled = true;
-      aiBtn.textContent = 'Claude is thinking…';
-      startProgress(profile.name);
+      aiBtn.textContent = 'Thinking…';
 
+      // Show a lightweight progress message (no full progress bar — the real
+      // search runs after the user consents)
       const panel = document.getElementById('results-panel');
-      // Show an AI-specific progress note
-      const phraseEl = document.getElementById('prog-phrase');
-      if (phraseEl) phraseEl.textContent = 'Claude is analyzing your profile and results…';
+      const prev = panel.innerHTML;
+      panel.innerHTML = `
+        <div class="progress-wrap">
+          <div class="progress-name">Claude is analyzing the profile…</div>
+          <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+          <div class="progress-phrase" id="prog-phrase">Evaluating current results and search settings…</div>
+        </div>`;
 
-      let aiExplanation = '';
+      // Animate the bar toward ~70% while waiting for Claude
+      let pct = 0;
+      const fill = document.getElementById('prog-fill');
+      const fillTimer = setInterval(() => {
+        if (pct < 70) { pct += Math.random() * 1.2 + 0.3; if (fill) fill.style.width = Math.min(pct, 70) + '%'; }
+      }, 400);
 
       try {
-        // Step 1: call /api/ai-enhance
         const enhanceRes = await fetch('/api/ai-enhance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1070,46 +1297,20 @@
         });
         const enhanceData = await enhanceRes.json();
         if (!enhanceRes.ok) {
-          stopProgress();
           panel.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(enhanceData.error || enhanceRes.statusText)}</div>`;
           return;
         }
-
-        aiExplanation = enhanceData.explanation || '';
-
-        // Step 2: apply the improved profile to the form
-        applyProfile({ ...loadedRawData, ...enhanceData.profile });
-        // applyProfile calls markClean; re-mark dirty since profile changed
-        markDirty();
-
-        // Update progress phrase for search phase
-        const phraseEl2 = document.getElementById('prog-phrase');
-        if (phraseEl2) phraseEl2.textContent = 'Profile enhanced — running search with improved settings…';
-
-        // Step 3: run the search with the new profile
-        const searchRes = await fetch('/api/candidate/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(profile),
-        });
-        const searchData = await searchRes.json();
-        stopProgress();
-
-        if (!searchRes.ok) {
-          panel.innerHTML = `<div class="error-box">Search failed: ${esc(searchData.error || searchRes.statusText)}</div>`;
-          return;
-        }
-
-        lastResults = searchData;
-        renderResults(searchData, aiExplanation);
+        // Restore previous results panel (or placeholder) while user reviews
+        panel.innerHTML = prev;
+        showStagedChanges(enhanceData.explanation || '', enhanceData.profile);
       } catch (err) {
-        stopProgress();
         panel.innerHTML = `<div class="error-box">Error: ${esc(err.message)}</div>`;
       } finally {
+        clearInterval(fillTimer);
         searching = false;
         runBtn.disabled = false;
         aiBtn.disabled = false;
-        aiBtn.textContent = 'Enhance & Search →';
+        updateAiBtn();
       }
     }
 
