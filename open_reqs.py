@@ -33,6 +33,7 @@ Usage:
 """
 
 import argparse
+import io
 import json
 import math
 import os
@@ -63,6 +64,12 @@ try:
 except ImportError:
     _ANTHROPIC_AVAILABLE = False
 
+try:
+    import pypdf as _pypdf
+    _PYPDF_AVAILABLE = True
+except ImportError:
+    _PYPDF_AVAILABLE = False
+
 SCRIPT_DIR = Path(__file__).parent
 
 # ── Local claude CLI ──────────────────────────────────────────────────────────
@@ -80,6 +87,275 @@ def _run_via_claude_cli(prompt: str) -> str:
     if data.get("is_error"):
         raise RuntimeError(data.get("result", "claude CLI returned an error"))
     return data["result"]
+
+# ── GitHub Actions workflow template ──────────────────────────────────────────
+# Uses @@PLACEHOLDER@@ markers; substituted via .replace() to avoid conflicts
+# with the ${{ }} GitHub Actions expression syntax inside the template.
+_WORKFLOW_TEMPLATE = r"""name: @@CANDIDATE_NAME@@'s Job Search
+
+on:
+  workflow_dispatch:
+    inputs:
+      email_to:
+        description: "Who should receive the email digest?"
+        required: true
+        type: choice
+        default: "none"
+        options:
+          - "none"
+@@EMAIL_OPTIONS@@  schedule:
+    - cron: "@@CRON@@"
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip3 install pyyaml
+
+      - name: Read candidate profile
+        id: profile
+        run: |
+          python3 -c "
+          import yaml
+          with open('@@PROFILE_FILE@@') as f:
+              p = yaml.safe_load(f)
+          print(f\"email={p['email']}\")
+          print(f\"referrer_email={p['referrer_email']}\")
+          print(f\"name={p['name']}\")
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Run candidate job search and export JSON
+        run: python3 open_reqs.py --candidate --profile @@PROFILE_FILE@@ --limit 50 --json > results.json
+
+      - name: Send email digest
+        if: ${{ github.event.inputs.email_to != 'none' || github.event_name == 'schedule' }}
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        run: |
+          INPUT="${{ github.event.inputs.email_to }}"
+          if [ -n "$INPUT" ] && [ "$INPUT" != "none" ]; then
+            EMAIL="$INPUT"
+          else
+            EMAIL="${{ steps.profile.outputs.email }}"
+          fi
+          python3 open_reqs.py --profile @@PROFILE_FILE@@ --from-json results.json --email "$EMAIL" --cc "${{ steps.profile.outputs.referrer_email }}"
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-results
+          path: results.json
+          retention-days: 7
+
+      - name: Upload email digest artifact
+        if: ${{ github.event.inputs.email_to != 'none' || github.event_name == 'schedule' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-digest
+          path: email_digest.html
+          retention-days: 7
+"""
+
+
+def _workflow_slug(profile_filename: str) -> str:
+    """Convert a profile filename to its workflow slug."""
+    return profile_filename.replace("_profile.yaml", "").replace("_", "-")
+
+
+def _workflow_path(profile_filename: str) -> Path:
+    """Return the .github/workflows path for a candidate profile."""
+    return SCRIPT_DIR / ".github" / "workflows" / f"{_workflow_slug(profile_filename)}-job-search.yml"
+
+
+def _get_workflow_info(profile_filename: str) -> dict:
+    """Return {exists, cron} for the workflow file associated with a profile."""
+    wf = _workflow_path(profile_filename)
+    if not wf.exists():
+        return {"exists": False, "cron": None}
+    try:
+        content = wf.read_text()
+        m = re.search(r'- cron:\s*"([^"]+)"', content)
+        return {"exists": True, "cron": m.group(1) if m else None}
+    except Exception:
+        return {"exists": True, "cron": None}
+
+
+def _write_workflow(profile_filename: str, profile: dict, cron: str) -> None:
+    """Create or update a GitHub Actions workflow file for a candidate profile.
+
+    If the file already exists, only the cron expression is patched.
+    If it doesn't exist, a new file is generated from the template.
+    """
+    wf = _workflow_path(profile_filename)
+    wf.parent.mkdir(parents=True, exist_ok=True)
+
+    if wf.exists():
+        content = wf.read_text()
+        content = re.sub(r'(- cron:\s*)"[^"]*"', rf'\1"{cron}"', content)
+        wf.write_text(content)
+    else:
+        candidate_name = profile.get("name", "Candidate")
+        candidate_email = profile.get("email", "")
+        referrer_email = profile.get("referrer_email", "")
+
+        email_opts = ""
+        if candidate_email:
+            email_opts += f'          - "{candidate_email}"\n'
+        if referrer_email and referrer_email != candidate_email:
+            email_opts += f'          - "{referrer_email}"\n'
+
+        content = (
+            _WORKFLOW_TEMPLATE
+            .replace("@@CANDIDATE_NAME@@", candidate_name)
+            .replace("@@EMAIL_OPTIONS@@", email_opts)
+            .replace("@@CRON@@", cron)
+            .replace("@@PROFILE_FILE@@", profile_filename)
+        )
+        wf.write_text(content)
+
+
+def _generate_profile_from_resume(name: str, resume_text: str) -> dict:
+    """Use the Claude CLI to generate a candidate profile from a name and resume text.
+
+    Returns a dict with keys: explanation, profile.
+    """
+    if not _CLAUDE_BIN:
+        raise RuntimeError("NOT_AUTHENTICATED")
+
+    loc_list = ", ".join(f"{k} ({v['label']})" for k, v in LOCATIONS.items())
+    resume_section = (
+        f"Resume / background:\n{resume_text}"
+        if resume_text.strip()
+        else "No resume provided — generate a sensible default Apple job search profile."
+    )
+
+    prompt = f"""You are an expert career counselor helping optimize a job search on Apple's jobs.apple.com.
+
+Candidate name: {name}
+{resume_section}
+
+Generate an optimized search profile for this candidate to find relevant positions at Apple.
+Available Apple office location codes: {loc_list}
+
+Guidelines:
+- queries: 3-6 specific job title search terms that are likely to appear on Apple's careers site
+- boost_keywords.strong: technologies/skills the candidate clearly has
+- boost_keywords.moderate: skills mentioned or implied by their background
+- boost_keywords.light: adjacent skills or Apple team names that might surface good results
+- penalty_keywords.hard: seniority/role types that don't fit (e.g. "senior", "manager" for early-career)
+- penalty_keywords.soft: domains or specialties unlikely to be a good fit
+- locations: 2-3 most relevant Apple office location codes based on the resume
+
+Respond with ONLY a valid JSON object (no markdown, no extra text):
+{{
+  "explanation": "2-3 sentences about the search strategy for this candidate.",
+  "profile": {{
+    "name": "{name}",
+    "email": "",
+    "locations": [],
+    "queries": [],
+    "pages_per_query": 3,
+    "boost_keywords": {{
+      "strong": [],
+      "moderate": [],
+      "light": []
+    }},
+    "penalty_keywords": {{
+      "hard": [],
+      "soft": []
+    }},
+    "referrer_name": "",
+    "referrer_phone": "",
+    "referrer_email": "",
+    "referral_notes": ""
+  }}
+}}"""
+
+    text = _run_via_claude_cli(prompt).strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[^\n]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text)
+        text = text.strip()
+
+    result = json.loads(text)
+    return {
+        "explanation": result.get("explanation", ""),
+        "profile": result["profile"],
+    }
+
+
+def _git_status() -> dict:
+    """Return counts of locally-changed profile/workflow files and unpushed commits."""
+    cwd = str(SCRIPT_DIR)
+    dirty_out = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True, text=True, cwd=cwd, timeout=10,
+    )
+    changed = [
+        line[3:] for line in dirty_out.stdout.splitlines()
+        if line.strip() and (
+            line[3:].endswith("_profile.yaml") or "-job-search.yml" in line[3:]
+        )
+    ]
+    ahead_out = subprocess.run(
+        ["git", "rev-list", "@{u}..HEAD", "--count"],
+        capture_output=True, text=True, cwd=cwd, timeout=10,
+    )
+    try:
+        commits_ahead = int(ahead_out.stdout.strip()) if ahead_out.returncode == 0 else 0
+    except ValueError:
+        commits_ahead = 0
+    return {"changedFiles": len(changed), "commitsAhead": commits_ahead}
+
+
+def _git_deploy() -> dict:
+    """Stage profile/workflow files, commit, and push to origin."""
+    cwd = str(SCRIPT_DIR)
+
+    # Stage relevant files selectively
+    to_stage = (
+        list(SCRIPT_DIR.glob("*_profile.yaml")) +
+        list((SCRIPT_DIR / ".github" / "workflows").glob("*-job-search.yml"))
+    )
+    for f in to_stage:
+        if f.exists():
+            subprocess.run(
+                ["git", "add", "--", str(f.relative_to(SCRIPT_DIR))],
+                capture_output=True, text=True, cwd=cwd, timeout=10,
+            )
+
+    # Check if anything is staged
+    staged_out = subprocess.run(
+        ["git", "status", "--porcelain", "--cached"],
+        capture_output=True, text=True, cwd=cwd, timeout=10,
+    )
+    if staged_out.stdout.strip():
+        commit = subprocess.run(
+            ["git", "commit", "-m", "Update profiles and schedules from web UI"],
+            capture_output=True, text=True, cwd=cwd, timeout=30,
+        )
+        if commit.returncode != 0:
+            return {"ok": False, "output": (commit.stderr + commit.stdout).strip()}
+
+    push = subprocess.run(
+        ["git", "push"],
+        capture_output=True, text=True, cwd=cwd, timeout=60,
+    )
+    return {"ok": push.returncode == 0, "output": (push.stdout + push.stderr).strip()}
+
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
 
@@ -1252,12 +1528,6 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
       explanation  — human-readable summary of changes made
       profile      — updated profile dict
     """
-    if not _ANTHROPIC_AVAILABLE:
-        raise RuntimeError(
-            "The 'anthropic' package is not installed. "
-            "Run: pip3 install anthropic"
-        )
-
     if not _CLAUDE_BIN:
         raise RuntimeError("NOT_AUTHENTICATED")
 
@@ -1420,6 +1690,21 @@ def run_server(port: int):
             elif self.path == "/api/auth/status":
                 self._json_ok({"authenticated": bool(_CLAUDE_BIN)})
 
+            # ── Workflow info ──────────────────────────────────────────────────
+            elif self.path.startswith("/api/workflow/"):
+                filename = self.path[len("/api/workflow/"):]
+                if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
+                    self._json_err(400, "invalid filename")
+                    return
+                self._json_ok(_get_workflow_info(filename))
+
+            # ── Git status ─────────────────────────────────────────────────────
+            elif self.path == "/api/git/status":
+                try:
+                    self._json_ok(_git_status())
+                except Exception as e:
+                    self._json_err(500, str(e))
+
             else:
                 super().do_GET()
 
@@ -1460,6 +1745,50 @@ def run_server(port: int):
                     self._json_ok(_run_candidate_search_web(profile))
                 except Exception as e:
                     self._json_err(502, str(e))
+            elif self.path == "/api/profile/generate":
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    req_data = json.loads(body)
+                    name = req_data.get("name", "").strip()
+                    resume_text = req_data.get("resume_text", "").strip()
+                    filename = req_data.get("filename", "")
+                    if not name or not filename:
+                        self._json_err(400, "name and filename required")
+                        return
+                    if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
+                        self._json_err(400, "invalid filename")
+                        return
+                    result = _generate_profile_from_resume(name, resume_text)
+                    profile_path = SCRIPT_DIR / filename
+                    with open(profile_path, "w") as f:
+                        yaml.dump(result["profile"], f, default_flow_style=False,
+                                  allow_unicode=True, sort_keys=False)
+                    _write_workflow(filename, result["profile"], "37 20 * * *")
+                    self._json_ok(result)
+                except Exception as e:
+                    self._json_err(502, str(e))
+
+            elif self.path == "/api/profile/extract-pdf":
+                if not _PYPDF_AVAILABLE:
+                    self._json_err(503, "pypdf not installed — run: pip3 install pypdf")
+                    return
+                content_len = int(self.headers.get("Content-Length", 0))
+                pdf_bytes = self.rfile.read(content_len)
+                try:
+                    reader = _pypdf.PdfReader(io.BytesIO(pdf_bytes))
+                    pages = [p.extract_text() or "" for p in reader.pages]
+                    text = "\n\n".join(t for t in pages if t.strip())
+                    self._json_ok({"text": text})
+                except Exception as e:
+                    self._json_err(500, str(e))
+
+            elif self.path == "/api/git/deploy":
+                try:
+                    self._json_ok(_git_deploy())
+                except Exception as e:
+                    self._json_err(500, str(e))
+
             elif self.path == "/api/ai-enhance":
                 content_len = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_len)
@@ -1476,7 +1805,30 @@ def run_server(port: int):
                 self.end_headers()
 
         def do_PUT(self):
-            if self.path.startswith("/api/profile/"):
+            if self.path.startswith("/api/workflow/"):
+                filename = self.path[len("/api/workflow/"):]
+                if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
+                    self._json_err(400, "invalid filename")
+                    return
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    req_data = json.loads(body)
+                    cron = req_data.get("cron", "").strip()
+                    if not cron:
+                        self._json_err(400, "cron required")
+                        return
+                    profile_path = SCRIPT_DIR / filename
+                    profile_data = {}
+                    if profile_path.exists():
+                        with open(profile_path) as f:
+                            profile_data = yaml.safe_load(f) or {}
+                    _write_workflow(filename, profile_data, cron)
+                    self._json_ok({"saved": True, "cron": cron})
+                except Exception as e:
+                    self._json_err(500, str(e))
+
+            elif self.path.startswith("/api/profile/"):
                 filename = self.path[len("/api/profile/"):]
                 if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
                     self.send_response(400)
@@ -1501,7 +1853,7 @@ def run_server(port: int):
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Content-Length")
             self.end_headers()
 
         def log_message(self, format, *args):

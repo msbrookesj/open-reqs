@@ -560,6 +560,67 @@
 
     .no-results { text-align: center; padding: 40px 0; color: #333; font-size: 13px; }
 
+    /* ── Git status bar ── */
+    .git-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .git-ok   { color: #444; }
+    .git-warn { color: #e8c84a; }
+    .git-info { color: #6cb6ff; }
+    .deploy-btn {
+      background: rgba(232,200,74,0.1);
+      border: 1px solid rgba(232,200,74,0.25);
+      color: #e8c84a;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s;
+    }
+    .deploy-btn:disabled { opacity: 0.4; cursor: default; }
+    .deploy-btn:not(:disabled):hover { background: rgba(232,200,74,0.2); }
+
+    /* ── Resume / generate form ── */
+    .resume-drop {
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 11px;
+      color: #444;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 5px;
+    }
+    .resume-drop:hover { border-color: rgba(168,216,255,0.3); color: #a8d8ff; }
+    .resume-drop.drag-over { border-color: rgba(168,216,255,0.5); background: rgba(168,216,255,0.05); }
+
+    /* ── Schedule section ── */
+    .schedule-hint {
+      font-size: 10px;
+      color: #3a3a3c;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .schedule-save-btn {
+      background: rgba(108,182,255,0.1);
+      border: 1px solid rgba(108,182,255,0.2);
+      color: #6cb6ff;
+      border-radius: 7px;
+      padding: 5px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .schedule-save-btn:disabled { opacity: 0.3; cursor: default; }
+    .schedule-save-btn:not(:disabled):hover { background: rgba(108,182,255,0.2); }
+
     /* ── Progress indicator ── */
     .progress-wrap {
       padding: 80px 48px;
@@ -595,7 +656,10 @@
       <div class="topbar-title">Open Reqs</div>
       <div class="topbar-sub">Candidate profile search with scored results</div>
     </div>
-    <button class="run-btn" id="run-btn">Run Search →</button>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="git-bar" id="git-bar"></div>
+      <button class="run-btn" id="run-btn">Run Search →</button>
+    </div>
   </div>
 
   <!-- Two-column layout -->
@@ -616,10 +680,24 @@
       </div>
       <div id="new-profile-row" style="display:none;margin-top:8px;">
         <input class="field" id="new-profile-name" placeholder="Candidate full name…" style="margin-bottom:5px;" />
-        <div style="display:flex;gap:6px;">
-          <button class="save-btn dirty" id="new-profile-create">Create Profile</button>
+
+        <!-- Resume input for Claude-powered generation -->
+        <div class="group-label" style="margin-bottom:4px;">Resume <span style="color:#3a3a3c;">(optional — powers Generate)</span></div>
+        <textarea class="field" id="new-profile-resume"
+          placeholder="Paste resume text here…"
+          style="min-height:72px;margin-bottom:5px;font-size:11px;"></textarea>
+        <label id="new-profile-drop" class="resume-drop">
+          <input type="file" id="new-profile-file" accept=".pdf,.txt" style="display:none" />
+          Browse or drop a PDF / .txt file
+        </label>
+        <div id="new-profile-file-status" style="font-size:10px;color:#555;margin-bottom:5px;display:none;"></div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="save-btn dirty" id="new-profile-generate">Generate with Claude →</button>
+          <button class="revert-btn" id="new-profile-blank">Create blank</button>
           <button class="revert-btn" id="new-profile-cancel">Cancel</button>
         </div>
+        <div id="new-profile-gen-status" style="font-size:10px;color:#555;margin-top:5px;display:none;"></div>
       </div>
 
       <div class="divider"></div>
@@ -677,12 +755,40 @@
 
       <div class="divider"></div>
 
+      <div class="sec-label">Email &amp; Notifications <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-email"></span></div>
+      <div class="group-label">Candidate email</div>
+      <input class="field" id="f-email" type="email" placeholder="candidate@example.com" style="margin-bottom:7px;" />
+      <div class="group-label">Referrer email</div>
+      <input class="field" id="f-ref-email" type="email" placeholder="referrer@example.com" />
+
+      <div class="divider"></div>
+
       <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-referrer"></span></div>
       <input class="field" id="f-ref-name" type="text" placeholder="Referrer name..." style="margin-bottom:7px;" />
       <input class="field" id="f-ref-phone" type="text" placeholder="+1 (408) 555-0100" />
 
       <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-notes"></span></div>
       <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Schedule <span style="color:#3a3a3c;font-size:10px;">github actions</span></div>
+      <div id="schedule-no-workflow" style="font-size:10px;color:#3a3a3c;margin-bottom:6px;">
+        No workflow file found for this profile.
+        Save a schedule to create one.
+      </div>
+      <div class="group-label">Cron expression
+        <a href="https://crontab.guru" target="_blank" rel="noopener noreferrer"
+           style="color:#3a3a3c;font-size:10px;margin-left:4px;">↗ crontab.guru</a>
+      </div>
+      <input class="field" id="f-cron" type="text" placeholder="37 20 * * *"
+             style="margin-bottom:5px;font-family:monospace;" />
+      <div class="schedule-hint">e.g. daily at 12:37 PM PT = <code style="color:#6cb6ff;">37 20 * * *</code><br>Leave blank to disable the schedule.</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <button class="schedule-save-btn" id="schedule-save-btn">Save Schedule</button>
+        <span id="schedule-status" style="font-size:10px;display:none;"></span>
+      </div>
+      <div class="schedule-hint" style="margin-top:6px;">Schedule changes must be deployed to take effect.</div>
 
     </div>
 
@@ -736,6 +842,9 @@
 
       if ((profile.pages_per_query || 3) !== (loadedRawData.pages_per_query || 3)) d.add('settings');
 
+      if ((profile.email || '') !== (loadedRawData.email || '') ||
+          (profile.referrer_email || '') !== (loadedRawData.referrer_email || '')) d.add('email');
+
       if ((profile.referrer_name || '') !== (loadedRawData.referrer_name || '') ||
           (profile.referrer_phone || '') !== (loadedRawData.referrer_phone || '')) d.add('referrer');
 
@@ -746,7 +855,7 @@
 
     function refreshDirtyDots() {
       const d = computeDirtyFields();
-      ['name','loc','queries','boost','penalty','settings','referrer','notes'].forEach(k => {
+      ['name','loc','queries','boost','penalty','settings','email','referrer','notes'].forEach(k => {
         const el = document.getElementById('fdot-' + k);
         if (el) el.style.display = d.has(k) ? 'inline-block' : 'none';
       });
@@ -800,6 +909,7 @@
 
     let profile = {
       name: '',
+      email: '',
       locations: [],
       queries: [],
       boost_keywords: { strong: [], moderate: [], light: [] },
@@ -807,6 +917,7 @@
       pages_per_query: 3,
       referrer_name: '',
       referrer_phone: '',
+      referrer_email: '',
       referral_notes: '',
     };
 
@@ -942,6 +1053,8 @@
 
     // ── Simple field bindings ─────────────────────────────────────────────────
     document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; markDirty(); });
+    document.getElementById('f-email').addEventListener('input', e => { profile.email = e.target.value; markDirty(); });
+    document.getElementById('f-ref-email').addEventListener('input', e => { profile.referrer_email = e.target.value; markDirty(); });
     document.getElementById('f-pages').addEventListener('input', e => { profile.pages_per_query = parseInt(e.target.value) || 3; markDirty(); });
     document.getElementById('f-ref-name').addEventListener('input', e => { profile.referrer_name = e.target.value; markDirty(); });
     document.getElementById('f-ref-phone').addEventListener('input', e => { profile.referrer_phone = e.target.value; markDirty(); });
@@ -969,9 +1082,10 @@
 
     // ── Load profile from server ──────────────────────────────────────────────
     function applyProfile(data) {
-      loadedRawData = data;  // preserve all fields (email, base_url, etc.)
+      loadedRawData = data;  // preserve all fields (base_url, etc.)
 
       profile.name             = data.name             || '';
+      profile.email            = data.email            || '';
       profile.locations        = data.locations        || [];
       profile.queries          = data.queries          || [];
       profile.boost_keywords   = data.boost_keywords   || { strong: [], moderate: [], light: [] };
@@ -979,9 +1093,12 @@
       profile.pages_per_query  = data.pages_per_query  || 3;
       profile.referrer_name    = data.referrer_name    || '';
       profile.referrer_phone   = data.referrer_phone   || '';
+      profile.referrer_email   = data.referrer_email   || '';
       profile.referral_notes   = data.referral_notes   || '';
 
       document.getElementById('f-name').value       = profile.name;
+      document.getElementById('f-email').value      = profile.email;
+      document.getElementById('f-ref-email').value  = profile.referrer_email;
       document.getElementById('f-pages').value      = profile.pages_per_query;
       document.getElementById('f-ref-name').value   = profile.referrer_name;
       document.getElementById('f-ref-phone').value  = profile.referrer_phone;
@@ -1000,6 +1117,7 @@
         if (r.ok) {
           currentFile = filename;
           applyProfile(await r.json());
+          fetchWorkflowInfo(filename);
         }
       } catch (_) {}
     }
@@ -1012,6 +1130,7 @@
       const toSave = {
         ...loadedRawData,
         name:             profile.name,
+        email:            profile.email,
         locations:        profile.locations,
         queries:          profile.queries,
         boost_keywords:   profile.boost_keywords,
@@ -1019,6 +1138,7 @@
         pages_per_query:  profile.pages_per_query,
         referrer_name:    profile.referrer_name,
         referrer_phone:   profile.referrer_phone,
+        referrer_email:   profile.referrer_email,
         referral_notes:   profile.referral_notes,
       };
 
@@ -1036,6 +1156,7 @@
           markClean();
           saveBtn.className = 'save-btn saved';
           saveBtn.textContent = 'Saved ✓';
+          refreshGitStatus();
           setTimeout(() => {
             saveBtn.className = 'save-btn';
             saveBtn.textContent = 'Save';
@@ -1067,6 +1188,9 @@
       const row = document.getElementById('new-profile-row');
       row.style.display = '';
       document.getElementById('new-profile-name').value = '';
+      document.getElementById('new-profile-resume').value = '';
+      document.getElementById('new-profile-gen-status').style.display = 'none';
+      document.getElementById('new-profile-file-status').style.display = 'none';
       document.getElementById('new-profile-name').focus();
     });
 
@@ -1075,32 +1199,88 @@
     });
 
     document.getElementById('new-profile-name').addEventListener('keydown', e => {
-      if (e.key === 'Enter')  createNewProfile();
       if (e.key === 'Escape') document.getElementById('new-profile-row').style.display = 'none';
     });
 
-    document.getElementById('new-profile-create').addEventListener('click', createNewProfile);
+    document.getElementById('new-profile-blank').addEventListener('click', createBlankProfile);
+    document.getElementById('new-profile-generate').addEventListener('click', generateFromResume);
 
-    async function createNewProfile() {
+    // ── PDF / txt file upload for resume ─────────────────────────────────────
+    const dropEl = document.getElementById('new-profile-drop');
+    const fileInput = document.getElementById('new-profile-file');
+
+    dropEl.addEventListener('click', () => fileInput.click());
+
+    ['dragover', 'dragenter'].forEach(evt =>
+      dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.add('drag-over'); })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+      dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.remove('drag-over'); })
+    );
+    dropEl.addEventListener('drop', e => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleResumeFile(file);
+    });
+    fileInput.addEventListener('change', e => {
+      if (e.target.files?.[0]) handleResumeFile(e.target.files[0]);
+    });
+
+    async function handleResumeFile(file) {
+      const status = document.getElementById('new-profile-file-status');
+      status.textContent = 'Reading file…';
+      status.style.display = '';
+      try {
+        if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+          const res = await fetch('/api/profile/extract-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/pdf' },
+            body: file,
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            status.textContent = data.error || 'Could not extract PDF text';
+            return;
+          }
+          document.getElementById('new-profile-resume').value = data.text;
+          status.textContent = `Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`;
+        } else {
+          const text = await file.text();
+          document.getElementById('new-profile-resume').value = text;
+          status.textContent = `Loaded ${file.name}`;
+        }
+        setTimeout(() => { status.style.display = 'none'; }, 3000);
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    function _newProfileSlug(name) {
+      return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    }
+
+    function _addProfileToSelect(filename, name) {
+      const sel = document.getElementById('profile-select');
+      if (!Array.from(sel.options).some(o => o.value === filename)) {
+        const opt = document.createElement('option');
+        opt.value = filename;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      }
+      sel.value = filename;
+    }
+
+    async function createBlankProfile() {
       const nameInput = document.getElementById('new-profile-name');
       const name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
 
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-      const filename = `${slug}_profile.yaml`;
-
+      const filename = `${_newProfileSlug(name)}_profile.yaml`;
       const blank = {
-        name,
-        email: '',
-        locations: ['SCV'],
-        queries: [],
-        pages_per_query: 3,
+        name, email: '',
+        locations: ['SCV'], queries: [], pages_per_query: 3,
         boost_keywords:   { strong: [], moderate: [], light: [] },
         penalty_keywords: { hard:   [], soft:   [] },
-        referrer_name:  '',
-        referrer_phone: '',
-        referrer_email: '',
-        referral_notes: '',
+        referrer_name: '', referrer_phone: '', referrer_email: '', referral_notes: '',
       };
 
       try {
@@ -1114,19 +1294,67 @@
           alert('Could not create profile: ' + (d.error || res.statusText));
           return;
         }
-        // Add to the select if not already present, then load it
-        const sel = document.getElementById('profile-select');
-        if (!Array.from(sel.options).some(o => o.value === filename)) {
-          const opt = document.createElement('option');
-          opt.value = filename;
-          opt.textContent = name;
-          sel.appendChild(opt);
-        }
-        sel.value = filename;
+        _addProfileToSelect(filename, name);
         await loadProfile(filename);
         document.getElementById('new-profile-row').style.display = 'none';
       } catch (err) {
         alert('Could not create profile: ' + err.message);
+      }
+    }
+
+    async function generateFromResume() {
+      const nameInput = document.getElementById('new-profile-name');
+      const name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+
+      const resumeText = document.getElementById('new-profile-resume').value;
+      const filename = `${_newProfileSlug(name)}_profile.yaml`;
+
+      const genBtn = document.getElementById('new-profile-generate');
+      const genStatus = document.getElementById('new-profile-gen-status');
+      genBtn.disabled = true;
+      genBtn.textContent = 'Generating…';
+      genStatus.textContent = 'Claude is generating a profile…';
+      genStatus.style.color = '#555';
+      genStatus.style.display = '';
+
+      try {
+        const res = await fetch('/api/profile/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, resume_text: resumeText, filename }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          genStatus.textContent = 'Failed: ' + (data.error || res.statusText);
+          genStatus.style.color = '#f08080';
+          return;
+        }
+        _addProfileToSelect(filename, name);
+        currentFile = filename;
+        applyProfile(data.profile);
+        fetchWorkflowInfo(filename);
+        document.getElementById('new-profile-row').style.display = 'none';
+        refreshGitStatus();
+
+        if (data.explanation) {
+          document.getElementById('results-content').innerHTML = `
+            <div class="ai-banner">
+              <div class="ai-banner-label">Profile Generated by Claude</div>
+              ${esc(data.explanation)}
+            </div>
+            <div class="placeholder" style="padding-top:24px;">
+              Review the profile in the sidebar, then click
+              <strong style="color:#a8d8ff;cursor:pointer;" onclick="runSearch()">Run Search →</strong>
+            </div>`;
+        }
+      } catch (err) {
+        genStatus.textContent = 'Error: ' + err.message;
+        genStatus.style.color = '#f08080';
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = 'Generate with Claude →';
+        setTimeout(() => { genStatus.style.display = 'none'; }, 4000);
       }
     }
 
@@ -1504,6 +1732,96 @@
       if (e.target.value) loadProfile(e.target.value);
     });
 
+    // ── Schedule / workflow ───────────────────────────────────────────────────
+    async function fetchWorkflowInfo(filename) {
+      try {
+        const res = await fetch(`/api/workflow/${encodeURIComponent(filename)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        document.getElementById('schedule-no-workflow').style.display = data.exists ? 'none' : '';
+        document.getElementById('f-cron').value = data.cron || '';
+      } catch (_) {}
+    }
+
+    document.getElementById('schedule-save-btn').addEventListener('click', saveSchedule);
+
+    async function saveSchedule() {
+      if (!currentFile) return;
+      const cron = document.getElementById('f-cron').value.trim();
+      const btn = document.getElementById('schedule-save-btn');
+      const status = document.getElementById('schedule-status');
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch(`/api/workflow/${encodeURIComponent(currentFile)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cron: cron || '37 20 * * *' }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('schedule-no-workflow').style.display = 'none';
+          status.textContent = 'Saved — deploy to activate';
+          status.style.color = '#7ee8a2';
+          status.style.display = '';
+          setTimeout(() => { status.style.display = 'none'; }, 3000);
+          refreshGitStatus();
+        } else {
+          status.textContent = data.error || 'Save failed';
+          status.style.color = '#f08080';
+          status.style.display = '';
+        }
+      } catch (err) {
+        status.textContent = err.message;
+        status.style.color = '#f08080';
+        status.style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Schedule';
+      }
+    }
+
+    // ── Git status / deploy ───────────────────────────────────────────────────
+    async function refreshGitStatus() {
+      const bar = document.getElementById('git-bar');
+      try {
+        const res = await fetch('/api/git/status');
+        if (!res.ok) { bar.innerHTML = ''; return; }
+        const { changedFiles, commitsAhead } = await res.json();
+
+        if (changedFiles === 0 && commitsAhead === 0) {
+          bar.innerHTML = '<span class="git-ok">✓ deployed</span>';
+        } else {
+          const parts = [];
+          if (changedFiles > 0) parts.push(`${changedFiles} file${changedFiles > 1 ? 's' : ''} modified`);
+          if (commitsAhead > 0) parts.push(`↑ ${commitsAhead} ahead`);
+          bar.innerHTML = `
+            <span class="git-warn">● ${esc(parts.join(', '))}</span>
+            <button class="deploy-btn" id="deploy-btn" onclick="gitDeploy()">Deploy →</button>`;
+        }
+      } catch (_) {
+        bar.innerHTML = '';
+      }
+    }
+
+    async function gitDeploy() {
+      const btn = document.getElementById('deploy-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Deploying…'; }
+      try {
+        const res = await fetch('/api/git/deploy', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('Deploy failed:\n' + (data.output || 'unknown error'));
+        }
+      } catch (err) {
+        alert('Deploy error: ' + err.message);
+      } finally {
+        await refreshGitStatus();
+      }
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────────
     async function init() {
       try {
@@ -1535,6 +1853,7 @@
         console.warn('Init failed:', err);
         renderLocChips();
       }
+      refreshGitStatus();
     }
 
     init();

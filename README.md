@@ -32,24 +32,35 @@ Run `python open_reqs.py --serve` to start a local proxy server. The UI is a two
 ### Profile editor (sidebar)
 
 - **Load Profile** — select any `*_profile.yaml` file from the repo root
+- **+ New** — create a new profile. Enter a name, optionally paste a resume (or drop a PDF/txt file), then click **Generate with Claude →** for an AI-generated profile or **Create blank** for an empty one
 - **Save** — writes changes back to the YAML file; enabled only when there are unsaved changes
 - **Revert** — discards all unsaved edits and restores the last saved state; enabled only when dirty
 - **Dirty indicators** — a small amber dot appears next to any section label whose fields differ from the saved state
 - **Tag groups** — Search Queries, Boost Keywords, and Penalty Keywords are editable inline tag inputs. New keywords (not yet saved) render **bold** at the top; removed keywords appear with ~~strikethrough~~ at the bottom and can be clicked to restore them.
+- **Email & Notifications** — candidate email and referrer email fields; saved to the profile YAML and used by GitHub Actions workflows
+- **Schedule** — configure the cron expression for the associated GitHub Actions workflow. Click **Save Schedule** to write the change to the workflow file; the top bar shows the deployment status
 
 ### AI Enhanced Search
 
-Uses Claude Opus to analyze the current profile (and optionally the most recent search results) and propose improvements. Requires `ANTHROPIC_API_KEY` in the environment and `pip3 install anthropic`.
+Uses the locally installed `claude` CLI to analyze the current profile (and optionally the most recent search results) and propose improvements. Requires [Claude Code](https://claude.ai/download) to be installed and signed in.
 
 1. Optionally type guidance in the feedback box (e.g. "too many senior roles, focus more on data")
 2. Click **Enhance** (no prior results) or **Enhance from Results** (after a search) — the button is disabled until one of those conditions is met
 3. Claude returns a **Proposed Changes** panel showing:
    - A plain-English explanation of what changed and why
    - A field-by-field diff (`+ added` / `− removed`) for every changed section
-4. **Apply & Search →** applies the changes to the profile (marks it dirty), then runs a full search
+4. **Apply** applies the changes to the profile (marks it dirty)
 5. **Discard** (or ✕) throws the proposal away — nothing changes
 
 Applied changes are never auto-saved. Review the diff in the tag groups, then Save explicitly.
+
+### Deploy to GitHub (git status bar)
+
+The top bar shows a git status indicator for profile and workflow files:
+
+- **✓ deployed** — all saved changes are live on GitHub Actions
+- **● N files modified / ↑ N ahead** — there are local changes or committed-but-not-pushed commits
+- **Deploy →** — stages all profile YAMLs and workflow files, commits with an auto-message, and pushes to `origin/main`. This makes schedule changes take effect on GitHub Actions.
 
 ### Running a search
 
@@ -164,6 +175,7 @@ pip3 install -r requirements.txt
 | Package | Required for |
 |---------|-------------|
 | `pyyaml` | Candidate profile mode (`--candidate`, `--serve`) |
-| `anthropic` | AI Enhanced Search in the web UI |
+| `anthropic` | (unused; retained for legacy imports) |
+| `pypdf` | PDF text extraction in the **+ New** profile form |
 
-If `anthropic` is not installed, the server still starts and all other features work. A warning is printed at startup and the Enhance button returns an error if clicked.
+If `pypdf` is not installed, PDF upload in the new-profile form returns an error; paste-text still works. All other features are unaffected.
