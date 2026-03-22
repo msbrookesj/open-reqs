@@ -63,8 +63,24 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).parent
 
-# ── API key (in-memory; cleared on server restart) ────────────────────────────
-_api_key: str | None = None
+# ── API key ───────────────────────────────────────────────────────────────────
+_API_KEY_FILE = SCRIPT_DIR / ".api_key"
+
+def _load_api_key() -> str | None:
+    """Return the first API key found: env var → .api_key file."""
+    if k := os.environ.get("ANTHROPIC_API_KEY"):
+        return k
+    if _API_KEY_FILE.exists():
+        k = _API_KEY_FILE.read_text().strip()
+        if k:
+            return k
+    return None
+
+def _save_api_key(key: str) -> None:
+    _API_KEY_FILE.write_text(key)
+    _API_KEY_FILE.chmod(0o600)
+
+_api_key: str | None = _load_api_key()
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
 
@@ -1243,12 +1259,11 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
             "Run: pip3 install anthropic"
         )
 
-    if not _api_key and not os.environ.get("ANTHROPIC_API_KEY"):
+    key = _api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
         raise RuntimeError("NOT_AUTHENTICATED")
 
-    client = _anthropic.Anthropic(
-        **({"api_key": _api_key} if _api_key else {})
-    )
+    client = _anthropic.Anthropic(api_key=key)
 
     # Build a compact results summary to keep tokens down
     results_summary = ""
@@ -1419,7 +1434,7 @@ def run_server(port: int):
 
             # ── Auth ───────────────────────────────────────────────────────────
             elif self.path == "/api/auth/status":
-                self._json_ok({"authenticated": bool(_api_key or os.environ.get("ANTHROPIC_API_KEY"))})
+                self._json_ok({"authenticated": bool(_api_key)})
 
             else:
                 super().do_GET()
@@ -1435,6 +1450,7 @@ def run_server(port: int):
                         self._json_err(400, "That doesn't look like a valid API key (should start with sk-)")
                         return
                     _api_key = key
+                    _save_api_key(key)
                     self._json_ok({"ok": True})
                 except Exception as e:
                     self._json_err(400, str(e))
