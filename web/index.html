@@ -348,6 +348,26 @@
       margin-bottom: 5px;
     }
 
+    /* Stale results banner */
+    .stale-banner {
+      background: rgba(232,200,74,0.07);
+      border: 1px solid rgba(232,200,74,0.18);
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #a89040;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stale-banner a {
+      color: #e8c84a;
+      cursor: pointer;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+
     /* Run button */
     .run-btn {
       background: rgba(168,216,255,0.18);
@@ -640,10 +660,18 @@
 
     <!-- Results panel -->
     <div class="results-panel" id="results-panel">
-      <div class="placeholder" id="placeholder">
-        Configure a candidate profile and click<br>
-        <strong style="color:#a8d8ff;cursor:pointer;" onclick="runSearch()">Run Search →</strong><br>
-        to see scored results.
+      <div id="stale-bar" style="display:none">
+        <div class="stale-banner">
+          Profile has changed since the last search — results may be out of date.
+          <a onclick="runSearch()">Run Search</a>
+        </div>
+      </div>
+      <div id="results-content">
+        <div class="placeholder">
+          Configure a candidate profile and click<br>
+          <strong style="color:#a8d8ff;cursor:pointer;" onclick="runSearch()">Run Search →</strong><br>
+          to see scored results.
+        </div>
       </div>
     </div>
 
@@ -651,9 +679,10 @@
 
   <script>
     // ── State ─────────────────────────────────────────────────────────────────
-    let currentFile = null;      // filename of the loaded profile
-    let loadedRawData = null;    // full original data (preserves email, base_url, etc.)
+    let currentFile = null;          // filename of the loaded profile
+    let loadedRawData = null;        // full original data (preserves email, base_url, etc.)
     let dirty = false;
+    let lastSearchedProfile = null;  // snapshot of profile at time of last search
 
     const saveBtn   = document.getElementById('save-btn');
     const revertBtn = document.getElementById('revert-btn');
@@ -695,6 +724,28 @@
       });
     }
 
+    // ── Staleness (results don't reflect current search-relevant fields) ──────
+    function isStale() {
+      if (!lastSearchedProfile) return true;
+      const eq = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+      return !eq(profile.locations,        lastSearchedProfile.locations)
+          || !eq(profile.queries,          lastSearchedProfile.queries)
+          || !eq(profile.boost_keywords,   lastSearchedProfile.boost_keywords)
+          || !eq(profile.penalty_keywords, lastSearchedProfile.penalty_keywords)
+          || (profile.pages_per_query || 3) !== (lastSearchedProfile.pages_per_query || 3);
+    }
+
+    function refreshStaleBanner() {
+      document.getElementById('stale-bar').style.display =
+        (lastSearchedProfile && isStale()) ? '' : 'none';
+    }
+
+    function updateRunBtn() {
+      const stale = isStale();
+      runBtn.disabled = !stale;
+      refreshStaleBanner();
+    }
+
     function markDirty() {
       if (!currentFile) return;
       dirty = true;
@@ -704,6 +755,7 @@
       revertBtn.disabled = false;
       dirtyDot.style.display = '';
       refreshDirtyDots();
+      updateRunBtn();
     }
 
     function markClean() {
@@ -715,6 +767,7 @@
       refreshDirtyDots();
       // Re-render tag groups so bold/strikethrough indicators clear
       Object.keys(tagGroups).forEach(renderTagGroup);
+      updateRunBtn();
     }
 
     let profile = {
@@ -1095,7 +1148,7 @@
            </div>`
         : '';
 
-      document.getElementById('results-panel').innerHTML = `
+      document.getElementById('results-content').innerHTML = `
         ${aiBannerHtml}
         <div class="result-header">
           <h2>Job Matches for ${esc(name)}</h2>
@@ -1107,14 +1160,6 @@
             <div class="stat-box"><div class="stat-n">${d.stats.total}</div><div class="stat-l">Total</div></div>
           </div>
         </div>
-
-        <details class="prof-summary">
-          <summary>View candidate profile for ${esc(name)} ▾</summary>
-          <div class="prof-panel">
-            <h4>Candidate Profile: ${esc(name)}</h4>
-            ${profSummary}
-          </div>
-        </details>
 
         ${ctaHtml}
         ${sectionsHtml}`;
@@ -1152,8 +1197,7 @@
     let _phraseTimer   = null;
 
     function startProgress(candidateName) {
-      const panel = document.getElementById('results-panel');
-      panel.innerHTML = `
+      document.getElementById('results-content').innerHTML = `
         <div class="progress-wrap">
           <div class="progress-name">Searching for ${esc(candidateName || 'candidate')}…</div>
           <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
@@ -1222,21 +1266,23 @@
         const data = await res.json();
         stopProgress();
         if (!res.ok) {
-          document.getElementById('results-panel').innerHTML =
+          document.getElementById('results-content').innerHTML =
             `<div class="error-box">Error: ${esc(data.error || res.statusText)}</div>`;
           return;
         }
+        lastSearchedProfile = JSON.parse(JSON.stringify(profile));
         lastResults = data;
         updateAiBtn();
+        updateRunBtn();
         renderResults(data, aiExplanation);
       } catch (err) {
         stopProgress();
-        document.getElementById('results-panel').innerHTML =
+        document.getElementById('results-content').innerHTML =
           `<div class="error-box">Error: ${esc(err.message)}</div>`;
       } finally {
         searching = false;
-        runBtn.disabled = false;
         runBtn.textContent = 'Run Search →';
+        updateRunBtn();
       }
     }
 
@@ -1338,9 +1384,9 @@
 
       // Show a lightweight progress message (no full progress bar — the real
       // search runs after the user consents)
-      const panel = document.getElementById('results-panel');
-      const prev = panel.innerHTML;
-      panel.innerHTML = `
+      const content = document.getElementById('results-content');
+      const prev = content.innerHTML;
+      content.innerHTML = `
         <div class="progress-wrap">
           <div class="progress-name">Claude is analyzing the profile…</div>
           <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
@@ -1366,14 +1412,14 @@
         });
         const enhanceData = await enhanceRes.json();
         if (!enhanceRes.ok) {
-          panel.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(enhanceData.error || enhanceRes.statusText)}</div>`;
+          content.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(enhanceData.error || enhanceRes.statusText)}</div>`;
           return;
         }
-        // Restore previous results panel (or placeholder) while user reviews
-        panel.innerHTML = prev;
+        // Restore previous results content while user reviews the proposal
+        content.innerHTML = prev;
         showStagedChanges(enhanceData.explanation || '', enhanceData.profile);
       } catch (err) {
-        panel.innerHTML = `<div class="error-box">Error: ${esc(err.message)}</div>`;
+        content.innerHTML = `<div class="error-box">Error: ${esc(err.message)}</div>`;
       } finally {
         clearInterval(fillTimer);
         searching = false;
