@@ -7,8 +7,7 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 ## Quick start
 
 ```bash
-pip install pyyaml          # required for candidate mode
-pip install anthropic       # optional — required for AI Enhanced Search in the web UI
+pip install -r requirements.txt
 
 # Search from the command line
 python open_reqs.py
@@ -33,7 +32,8 @@ Run `python open_reqs.py --serve` to start a local proxy server. The UI is a two
 ### Profile editor (sidebar)
 
 - **Load Profile** — select any `*_profile.yaml` file from the repo root
-- **Save / Revert** — Save writes changes back to the YAML file; Revert discards all unsaved edits and restores the last saved state. Both are enabled only when there are unsaved changes.
+- **Save** — writes changes back to the YAML file; enabled only when there are unsaved changes
+- **Revert** — discards all unsaved edits and restores the last saved state; enabled only when dirty
 - **Dirty indicators** — a small amber dot appears next to any section label whose fields differ from the saved state
 - **Tag groups** — Search Queries, Boost Keywords, and Penalty Keywords are editable inline tag inputs. New keywords (not yet saved) render **bold** at the top; removed keywords appear with ~~strikethrough~~ at the bottom and can be clicked to restore them.
 
@@ -166,4 +166,4 @@ pip install -r requirements.txt
 | `pyyaml` | Candidate profile mode (`--candidate`, `--serve`) |
 | `anthropic` | AI Enhanced Search in the web UI |
 
-If `anthropic` is not installed, the server still starts and all other features work. A warning is printed at startup and the Enhance button returns an error when clicked.
+If `anthropic` is not installed, the server still starts and all other features work. A warning is printed at startup and the Enhance button returns an error if clicked.
