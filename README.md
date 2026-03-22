@@ -1,6 +1,6 @@
 # open-reqs
 
-Apple job search tool for employee referrals. Queries the `jobs.apple.com` API directly — no scraping, no third-party services.
+Job search tool for employee referrals. Queries the `jobs.apple.com` API directly — no scraping, no third-party services.
 
 ---
 
@@ -8,16 +8,16 @@ Apple job search tool for employee referrals. Queries the `jobs.apple.com` API d
 
 ```bash
 # Search from the command line (no dependencies needed)
-python apple_jobs.py
+python open_reqs.py
 
 # Search for a specific role in specific locations
-python apple_jobs.py -q "backend software engineer" -l SVL SCV
+python open_reqs.py -q "backend software engineer" -l SVL SCV
 
 # Output as JSON for scripting
-python apple_jobs.py -q "data analyst" --json
+python open_reqs.py -q "data analyst" --json
 
 # Launch the web UI (dark-themed search interface)
-python apple_jobs.py --serve
+python open_reqs.py --serve
 # Then open http://localhost:8080
 ```
 
@@ -27,16 +27,16 @@ Run a multi-query, scored, deduplicated search tailored to a specific candidate.
 
 ```bash
 # Use the default profile (candidate_profile.yaml — Christine)
-python apple_jobs.py --candidate
+python open_reqs.py --candidate
 
 # Use a different profile
-python apple_jobs.py --candidate --profile kevin_katz_profile.yaml
+python open_reqs.py --candidate --profile kevin_katz_profile.yaml
 
 # Limit results and export JSON
-python apple_jobs.py --candidate --limit 50 --json
+python open_reqs.py --candidate --limit 50 --json
 
 # Send results as an HTML email digest
-python apple_jobs.py --candidate --email user@example.com --cc referrer@example.com
+python open_reqs.py --candidate --email user@example.com --cc referrer@example.com
 ```
 
 ### Candidate profiles
@@ -50,17 +50,17 @@ python apple_jobs.py --candidate --email user@example.com --cc referrer@example.
 | `yunjian_lu_profile.yaml` | Yunjian Lu | — | — |
 
 Profiles are YAML files with these sections:
-- **queries** — search terms run against the Apple jobs API
+- **queries** — search terms run against the jobs API
 - **boost_keywords** (strong / moderate / light) — terms that increase a job's relevance score
 - **penalty_keywords** (hard / soft) — terms that decrease relevance
-- **locations** — Apple location codes to search
+- **locations** — location codes to search
 - **referral_notes** — included in email digests
 
 ### GitHub Actions workflows
 
 | Workflow | File | Schedule |
 |----------|------|----------|
-| Christine's Job Search | `.github/workflows/apple-job-search.yml` | Daily at 12:37 PM PT + manual dispatch |
+| Christine's Job Search | `.github/workflows/christine-job-search.yml` | Daily at 12:37 PM PT + manual dispatch |
 | Kevin's Job Search | `.github/workflows/kevin-katz-job-search.yml` | Manual dispatch only |
 | Lauren's Job Search | `.github/workflows/lauren-ernst-job-search.yml` | Manual dispatch only |
 | Simone's Job Search | `.github/workflows/simone-donelly-job-search.yml` | Manual dispatch only |
@@ -87,7 +87,7 @@ Email sending requires these repository secrets: `SMTP_HOST`, `SMTP_PORT`, `SMTP
 
 ## Web UI
 
-Run `python apple_jobs.py --serve` to start a local server that:
+Run `python open_reqs.py --serve` to start a local server that:
 - Serves a self-contained search interface at `http://localhost:8080`
 - Proxies API calls to `jobs.apple.com` (bypasses browser CORS restrictions)
 - Shows results with Req IDs (click-to-select), team names, locations, and direct links

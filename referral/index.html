@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Apple Jobs Search — Referral Tool</title>
+  <title>Job Search — Referral Tool</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -106,7 +106,7 @@
   <div class="container" id="app">
     <div style="margin-bottom: 32px;">
       <div class="badge">Live · jobs.apple.com API</div>
-      <h1>Apple Jobs Search</h1>
+      <h1>Job Search</h1>
       <p class="subtitle">Find roles for employee referrals — search, filter, grab the Req ID</p>
     </div>
 
@@ -134,8 +134,8 @@
     <div id="results"></div>
 
     <div class="footer">
-      Req IDs are click-to-select. Links open the live Apple job posting. Data is real-time from jobs.apple.com.<br>
-      Run via: <code>python apple_jobs.py --serve</code>
+      Req IDs are click-to-select. Links open the live job posting. Data is real-time from jobs.apple.com.<br>
+      Run via: <code>python open_reqs.py --serve</code>
     </div>
   </div>
 
@@ -162,7 +162,7 @@
       { label: "San Diego", value: "postLocation-SDG" },
     ];
 
-    // Use local proxy when served from python apple_jobs.py --serve
+    // Use local proxy when served from python open_reqs.py --serve
     // Falls back to direct API call (will CORS-fail in browser without proxy)
     const API_URL = window.location.hostname === "localhost"
       ? "/api/role/search"
@@ -286,11 +286,11 @@
         if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("CORS")) {
           resultsDiv.innerHTML = `
             <div class="warning-box">
-              <div style="font-weight:600;margin-bottom:6px">⚠ CORS blocked by Apple's API</div>
+              <div style="font-weight:600;margin-bottom:6px">⚠ CORS blocked by the API</div>
               <div class="detail">
-                Apple's jobs API doesn't allow direct browser requests. Run the built-in proxy server instead:
+                The jobs API doesn't allow direct browser requests. Run the built-in proxy server instead:
                 <br><br>
-                <code style="color:#ffcc66">python apple_jobs.py --serve</code>
+                <code style="color:#ffcc66">python open_reqs.py --serve</code>
                 <br><br>
                 Then open <a href="http://localhost:8080" style="color:#ffcc66">http://localhost:8080</a> in your browser.
               </div>

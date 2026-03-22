@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
 """
-Search Apple job listings for employee referrals.
+Search job listings for employee referrals.
 
 Queries the jobs.apple.com API directly and displays matching roles
 with Req IDs, titles, teams, and direct links.
 
 Usage:
     # Search with default keywords and locations
-    python apple_jobs.py
+    python open_reqs.py
 
     # Search for a specific role
-    python apple_jobs.py --query "backend software engineer"
+    python open_reqs.py --query "backend software engineer"
 
     # Search in a specific location
-    python apple_jobs.py --query "iOS engineer" --location SVL
+    python open_reqs.py --query "iOS engineer" --location SVL
 
     # Show more results
-    python apple_jobs.py --query "data analyst" --limit 50
+    python open_reqs.py --query "data analyst" --limit 50
 
     # Output as JSON for scripting
-    python apple_jobs.py --query "python engineer" --json
+    python open_reqs.py --query "python engineer" --json
 
     # Run the web UI with built-in proxy server
-    python apple_jobs.py --serve
+    python open_reqs.py --serve
 
     # Run candidate-profile search (multi-query, scored, deduplicated)
-    python apple_jobs.py --candidate
-    python apple_jobs.py --candidate --json
+    python open_reqs.py --candidate
+    python open_reqs.py --candidate --json
 
     # Email results as a rich HTML digest
-    python apple_jobs.py --candidate --email user@example.com
+    python open_reqs.py --candidate --email user@example.com
 """
 
 import argparse
@@ -56,7 +56,12 @@ import yaml
 
 SCRIPT_DIR = Path(__file__).parent
 
-APPLE_JOBS_SEARCH_URL = "https://jobs.apple.com/en-us/search"
+DEFAULT_BASE_URL = "https://jobs.apple.com"
+
+
+def _base_url() -> str:
+    """Return the jobs site base URL, preferring the loaded candidate profile."""
+    return CANDIDATE_PROFILE.get("base_url", DEFAULT_BASE_URL)
 
 LOCATIONS = {
     "SCV": {"label": "Santa Clara Valley / Cupertino", "slug": "santa-clara-valley-cupertino-SCV"},
@@ -146,7 +151,7 @@ def score_job(job: dict) -> int:
 
 def fetch_job_details(req_id: str, title_slug: str) -> dict:
     """Fetch the full job detail page and extract structured fields."""
-    url = f"https://jobs.apple.com/en-us/details/{req_id}/{title_slug}"
+    url = f"{_base_url()}/en-us/details/{req_id}/{title_slug}"
     req = urllib.request.Request(
         url,
         headers={
@@ -171,21 +176,21 @@ def fetch_job_details(req_id: str, title_slug: str) -> dict:
     detail = data.get("loaderData", {}).get("jobDetails", {}).get("jobsData", {})
     title = detail.get("postingTitle")
     if title and "\uf8ff" in title:
-        detail["postingTitle"] = _fix_apple_emoji(title)
+        detail["postingTitle"] = _fix_logo_emoji(title)
     return detail
 
 
-def _fix_apple_emoji(text: str) -> str:
-    """Replace Apple's private-use logo char (U+F8FF) with the 🍎 emoji."""
+def _fix_logo_emoji(text: str) -> str:
+    """Replace private-use logo char (U+F8FF) with the 🍎 emoji."""
     return text.replace("\uf8ff", "\U0001f34e")
 
 
 def _sanitize_job_titles(data: dict) -> dict:
-    """Fix Apple logo chars in postingTitle fields within search results."""
+    """Fix logo chars in postingTitle fields within search results."""
     for job in data.get("searchResults", []):
         title = job.get("postingTitle")
         if title and "\uf8ff" in title:
-            job["postingTitle"] = _fix_apple_emoji(title)
+            job["postingTitle"] = _fix_logo_emoji(title)
     return data
 
 
@@ -305,7 +310,7 @@ def second_pass_score(job_detail: dict) -> tuple[int, list[str], str]:
 
     if experience_level == "unknown":
         # No YOE requirement found — likely accessible
-        # Check for degree-only requirement (common for entry-level Apple roles)
+        # Check for degree-only requirement (common for entry-level roles)
         if "bachelor" in min_qual or "degree" in min_qual:
             experience_level = "entry-level"
             reasons.append("degree-based requirement (no YOE)")
@@ -537,6 +542,8 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
 
     # Build candidate profile summary
     profile = CANDIDATE_PROFILE
+    referrer_name = profile.get("referrer_name", "")
+    referrer_phone = profile.get("referrer_phone", "")
     boosts = profile.get("boost_keywords", {})
     penalties = profile.get("penalty_keywords", {})
 
@@ -591,6 +598,25 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
             </div>"""
     else:
         referral_notes_html = ""
+
+    header_byline = (
+        f'<p style="margin:6px 0 0 0;color:#a1a1a6;font-size:12px;">Curated by {referrer_name} for {candidate_name}</p>'
+        if referrer_name else ""
+    )
+
+    if referrer_name and referrer_phone:
+        _cta_action = f'then text <a href="sms:{referrer_phone}" class="cta-link">{referrer_name}</a> which position(s) you applied to so they can submit an employee referral on your behalf.'
+    elif referrer_name:
+        _cta_action = f'then let {referrer_name} know which position(s) you applied to so they can submit an employee referral on your behalf.'
+    else:
+        _cta_action = None
+    cta_html = f"""    <!-- Call to action -->
+    <div class="cta-box" style="border-radius:12px;padding:16px;margin-bottom:16px;">
+      <p style="margin:0 0 6px 0;font-size:14px;font-weight:600;" class="cta-title">Interested in a role?</p>
+      <p style="margin:0;font-size:13px;line-height:1.5;" class="cta-text">
+        Apply directly on the jobs site as soon as possible, {_cta_action}
+      </p>
+    </div>""" if _cta_action else ""
 
     return f"""<!DOCTYPE html>
 <html>
@@ -661,7 +687,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
         Job Matches for {candidate_name}
       </h1>
       <p style="margin:0;color:#a1a1a6;font-size:13px;">{today_date}</p>
-      <p style="margin:6px 0 0 0;color:#a1a1a6;font-size:12px;">Curated by Brooke Ryan for friend {candidate_name}</p>
+      {header_byline}
       <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
         <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;">
           <div style="color:#ffffff;font-size:18px;font-weight:bold;">{today_count}</div>
@@ -691,13 +717,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
       </div>
     </details>
 
-    <!-- Call to action -->
-    <div class="cta-box" style="border-radius:12px;padding:16px;margin-bottom:16px;">
-      <p style="margin:0 0 6px 0;font-size:14px;font-weight:600;" class="cta-title">Interested in a role?</p>
-      <p style="margin:0;font-size:13px;line-height:1.5;" class="cta-text">
-        Apply directly on the Apple jobs site as soon as possible, then text <a href="sms:+14084213607" class="cta-link">Brooke Ryan</a> which position(s) you applied to so she can submit an employee referral on your behalf.
-      </p>
-    </div>
+    {cta_html}
 
     <!-- Job Sections -->
     <div class="jobs-panel" style="border-radius:12px;padding:16px;">
@@ -735,9 +755,9 @@ def send_email(html: str, to_addr: str, candidate_name: str,
     if not user or not password:
         print("\n  SMTP credentials not configured.")
         print("  Set SMTP_USER and SMTP_PASSWORD environment variables.")
-        print("  (For iCloud, generate an app-specific password at https://appleid.apple.com)")
-        print(f"\n  Email saved to apple_jobs_email.html instead.")
-        with open("apple_jobs_email.html", "w", encoding="utf-8") as f:
+        print("  (For iCloud, generate an app-specific password in your account settings)")
+        print(f"\n  Email saved to open_reqs_email.html instead.")
+        with open("open_reqs_email.html", "w", encoding="utf-8") as f:
             f.write(html)
         return False
 
@@ -753,10 +773,11 @@ def send_email(html: str, to_addr: str, candidate_name: str,
         recipients.append(cc_addr)
 
     # Plain-text fallback
+    _referrer_name = CANDIDATE_PROFILE.get("referrer_name", "")
     plain = (
         f"Job Matches for {candidate_name}\n"
         f"View this email in an HTML-capable client for the full report.\n"
-        f"\nCurated by Brooke Ryan for friend {candidate_name}\n"
+        + (f"\nCurated by {_referrer_name} for {candidate_name}\n" if _referrer_name else "")
     )
     msg.attach(MIMEText(plain, "plain", "utf-8"))
     msg.attach(MIMEText(html, "html", "utf-8"))
@@ -922,14 +943,14 @@ def run_candidate_search(location_keys: list[str], limit: int, as_json: bool,
 
 
 def search_jobs(query: str, location_keys: list[str], page: int = 1) -> dict:
-    """Search Apple jobs by fetching the search page and extracting embedded data."""
+    """Search jobs by fetching the search page and extracting embedded data."""
     loc_slugs = [LOCATIONS[k]["slug"] for k in location_keys if k in LOCATIONS]
     params = [("search", query), ("page", str(page))]
     if loc_slugs:
         params.append(("location", " ".join(loc_slugs)))
 
     query_string = urllib.parse.urlencode(params)
-    url = f"{APPLE_JOBS_SEARCH_URL}?{query_string}"
+    url = f"{_base_url()}/en-us/search?{query_string}"
 
     req = urllib.request.Request(
         url,
@@ -959,11 +980,11 @@ def search_jobs(query: str, location_keys: list[str], page: int = 1) -> dict:
 
 
 def make_job_url(job: dict) -> str:
-    """Build the jobs.apple.com URL for a posting."""
+    """Build the job posting URL."""
     req_id = job.get("positionId") or job.get("id", "")
     title = job.get("postingTitle") or job.get("title") or ""
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-    return f"https://jobs.apple.com/en-us/details/{req_id}/{slug}"
+    return f"{_base_url()}/en-us/details/{req_id}/{slug}"
 
 
 def print_jobs(data: dict, limit: int):
@@ -1031,7 +1052,7 @@ def send_email_from_json(json_path: str, email_to: str,
     for entry in entries:
         job = {
             "positionId": entry.get("reqId", ""),
-            "postingTitle": _fix_apple_emoji(entry.get("title", "")),
+            "postingTitle": _fix_logo_emoji(entry.get("title", "")),
             "team": {"teamName": entry.get("team", "")},
             "locations": [{"name": entry.get("location", "")}],
             "postingDate": entry.get("postingDate", ""),
@@ -1056,7 +1077,7 @@ def run_server(port: int):
     import http.server
     import socketserver
 
-    web_dir = SCRIPT_DIR / "apple_referral"
+    web_dir = SCRIPT_DIR / "referral"
     index_path = web_dir / "index.html"
     if not index_path.exists():
         print(f"Web UI not found at {index_path}")
@@ -1112,7 +1133,7 @@ def run_server(port: int):
                 print(f"  [proxy] {args[0]}")
 
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
-        print(f"\n  Apple Jobs Search running at http://localhost:{port}")
+        print(f"\n  Job Search running at http://localhost:{port}")
         print(f"  Press Ctrl+C to stop.\n")
         try:
             httpd.serve_forever()
@@ -1122,7 +1143,7 @@ def run_server(port: int):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Search Apple job listings for employee referrals",
+        description="Search job listings for employee referrals",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             location codes:
@@ -1138,14 +1159,14 @@ def main():
               IRV   Irvine
 
             examples:
-              python apple_jobs.py
-              python apple_jobs.py -q "backend engineer" -l SVL SCV
-              python apple_jobs.py -q "data analyst" --limit 50 --json
-              python apple_jobs.py --candidate
-              python apple_jobs.py --candidate --limit 30 --json
-              python apple_jobs.py --candidate --email user@example.com
-              python apple_jobs.py --candidate --profile kevin_katz_profile.yaml
-              python apple_jobs.py --serve
+              python open_reqs.py
+              python open_reqs.py -q "backend engineer" -l SVL SCV
+              python open_reqs.py -q "data analyst" --limit 50 --json
+              python open_reqs.py --candidate
+              python open_reqs.py --candidate --limit 30 --json
+              python open_reqs.py --candidate --email user@example.com
+              python open_reqs.py --candidate --profile kevin_katz_profile.yaml
+              python open_reqs.py --serve
         """),
     )
     parser.add_argument("-q", "--query", type=str, default=DEFAULT_QUERY,
