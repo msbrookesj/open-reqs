@@ -157,7 +157,13 @@ Jobs below the minimum score threshold are filtered out before display.
 
 ## Dependencies
 
+```bash
+pip install -r requirements.txt
+```
+
 | Package | Required for |
 |---------|-------------|
 | `pyyaml` | Candidate profile mode (`--candidate`, `--serve`) |
 | `anthropic` | AI Enhanced Search in the web UI |
+
+If `anthropic` is not installed, the server still starts and all other features work. A warning is printed at startup and the Enhance button returns an error when clicked.

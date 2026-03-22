@@ -1495,6 +1495,10 @@ def run_server(port: int):
             if "/api/" in str(args):
                 print(f"  [proxy] {args[0]}")
 
+    if not _ANTHROPIC_AVAILABLE:
+        print("  Note: 'anthropic' package not found — AI Enhanced Search will be unavailable.")
+        print("  Install with: pip install anthropic  (or: pip install -r requirements.txt)\n")
+
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
         print(f"\n  Job Search running at http://localhost:{port}")
         print(f"  Press Ctrl+C to stop.\n")
