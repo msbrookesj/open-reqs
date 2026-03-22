@@ -179,6 +179,25 @@
     }
     .settings-row input { width: 64px; }
 
+    /* Revert button */
+    .revert-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #555;
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .revert-btn:disabled { opacity: 0.3; cursor: default; }
+    .revert-btn:not(:disabled):hover {
+      background: rgba(240,128,128,0.08);
+      border-color: rgba(240,128,128,0.3);
+      color: #f08080;
+    }
+
     /* Save button */
     .save-btn {
       background: rgba(255,255,255,0.05);
@@ -552,6 +571,7 @@
       </select>
       <div style="display:flex;align-items:center;gap:8px;margin-top:7px;">
         <button class="save-btn" id="save-btn" disabled>Save</button>
+        <button class="revert-btn" id="revert-btn" disabled>Revert</button>
         <span id="dirty-dot" style="display:none;font-size:11px;color:#e8c84a;">● unsaved changes</span>
       </div>
 
@@ -635,8 +655,9 @@
     let loadedRawData = null;    // full original data (preserves email, base_url, etc.)
     let dirty = false;
 
-    const saveBtn = document.getElementById('save-btn');
-    const dirtyDot = document.getElementById('dirty-dot');
+    const saveBtn   = document.getElementById('save-btn');
+    const revertBtn = document.getElementById('revert-btn');
+    const dirtyDot  = document.getElementById('dirty-dot');
 
     // ── Per-field dirty tracking ──────────────────────────────────────────────
     function computeDirtyFields() {
@@ -680,6 +701,7 @@
       saveBtn.disabled = false;
       saveBtn.className = 'save-btn dirty';
       saveBtn.textContent = 'Save';
+      revertBtn.disabled = false;
       dirtyDot.style.display = '';
       refreshDirtyDots();
     }
@@ -688,6 +710,7 @@
       dirty = false;
       saveBtn.disabled = true;
       saveBtn.className = 'save-btn';
+      revertBtn.disabled = true;
       dirtyDot.style.display = 'none';
       refreshDirtyDots();
       // Re-render tag groups so bold/strikethrough indicators clear
@@ -727,8 +750,11 @@
       const saved = getSaved();
       el.innerHTML = '';
 
-      items.forEach((item, i) => {
-        const isNew = saved !== null && !saved.includes(item);
+      // Split current items: new ones (not in saved) first, then unchanged
+      const newItems      = saved !== null ? items.filter(x => !saved.includes(x)) : [];
+      const existingItems = saved !== null ? items.filter(x =>  saved.includes(x)) : items;
+
+      function makeRemovableTag(item, isNew) {
         const span = document.createElement('span');
         span.className = `tag-item tg-${style}`;
         if (isNew) span.style.fontWeight = '700';
@@ -738,25 +764,33 @@
         x.textContent = '×';
         x.addEventListener('click', ev => {
           ev.stopPropagation();
-          const arr = getArr().slice();
-          arr.splice(i, 1);
-          setArr(arr);
+          const arr = getArr();
+          const idx = arr.indexOf(item);
+          if (idx >= 0) { const a = arr.slice(); a.splice(idx, 1); setArr(a); }
           renderTagGroup(id);
         });
         span.appendChild(txt);
         span.appendChild(x);
-        el.appendChild(span);
-      });
+        return span;
+      }
 
-      // Removed items: in saved but no longer in current — shown with strikethrough
+      newItems.forEach(item => el.appendChild(makeRemovableTag(item, true)));
+      existingItems.forEach(item => el.appendChild(makeRemovableTag(item, false)));
+
+      // Removed items: in saved but deleted — strikethrough, click to restore
       if (saved !== null) {
         saved.filter(x => !items.includes(x)).forEach(item => {
           const span = document.createElement('span');
           span.className = `tag-item tg-${style}`;
           span.style.textDecoration = 'line-through';
           span.style.opacity = '0.4';
-          span.style.cursor = 'default';
+          span.title = 'Click to restore';
           span.textContent = String(item);
+          span.addEventListener('click', ev => {
+            ev.stopPropagation();
+            setArr([...getArr(), item]);
+            renderTagGroup(id);
+          });
           el.appendChild(span);
         });
       }
@@ -941,6 +975,11 @@
     }
 
     saveBtn.addEventListener('click', saveProfile);
+
+    revertBtn.addEventListener('click', () => {
+      if (!loadedRawData) return;
+      applyProfile(loadedRawData);
+    });
 
     // ── Render helpers ────────────────────────────────────────────────────────
     function esc(s) {
