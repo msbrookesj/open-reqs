@@ -1228,6 +1228,7 @@
 
     async function handleResumeFile(file) {
       const status = document.getElementById('new-profile-file-status');
+      status.style.color = '#555';
       status.textContent = 'Reading file…';
       status.style.display = '';
       try {
@@ -1239,18 +1240,26 @@
           });
           const data = await res.json();
           if (!res.ok) {
-            status.textContent = data.error || 'Could not extract PDF text';
+            status.style.color = '#f08080';
+            status.textContent = `⚠ ${data.error || 'Could not extract PDF text'} — restart the server and try again`;
+            return;
+          }
+          if (!data.text || !data.text.trim()) {
+            status.style.color = '#f08080';
+            status.textContent = '⚠ PDF appears to be image-based — no text could be extracted. Paste resume text manually.';
             return;
           }
           document.getElementById('new-profile-resume').value = data.text;
-          status.textContent = `Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`;
+          status.style.color = '#7ee8a2';
+          status.textContent = `✓ Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`;
         } else {
           const text = await file.text();
           document.getElementById('new-profile-resume').value = text;
-          status.textContent = `Loaded ${file.name}`;
+          status.style.color = '#7ee8a2';
+          status.textContent = `✓ Loaded ${file.name}`;
         }
-        setTimeout(() => { status.style.display = 'none'; }, 3000);
       } catch (err) {
+        status.style.color = '#f08080';
         status.textContent = 'Error: ' + err.message;
       }
     }
@@ -1308,7 +1317,11 @@
       const name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
 
-      const resumeText = document.getElementById('new-profile-resume').value;
+      const resumeText = document.getElementById('new-profile-resume').value.trim();
+      if (!resumeText) {
+        const go = confirm('No resume text found — Claude will generate a generic profile without your background. Continue?');
+        if (!go) return;
+      }
       const filename = `${_newProfileSlug(name)}_profile.yaml`;
 
       const genBtn = document.getElementById('new-profile-generate');
