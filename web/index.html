@@ -141,7 +141,14 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 11px;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .tag-item .tag-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
     }
     .tag-item .x {
       cursor: pointer;
@@ -953,8 +960,11 @@
       function makeRemovableTag(item, isNew) {
         const span = document.createElement('span');
         span.className = `tag-item tg-${style}`;
+        span.title = String(item);
         if (isNew) span.style.fontWeight = '700';
-        const txt = document.createTextNode(String(item));
+        const txt = document.createElement('span');
+        txt.className = 'tag-text';
+        txt.textContent = String(item);
         const x = document.createElement('span');
         x.className = 'x';
         x.textContent = '×';
@@ -1286,8 +1296,12 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ resume_text: resumeText }),
         });
-        if (!res.ok) { identityEl.style.display = 'none'; return; }
         const data = await res.json();
+        if (!res.ok) {
+          identityEl.style.color = '#f08080';
+          identityEl.textContent = `⚠ Could not detect identity: ${data.error || res.statusText}`;
+          return;
+        }
         _inferredName = data.name || '';
         _inferredEmail = data.email || '';
         if (_inferredName || _inferredEmail) {
@@ -1298,8 +1312,9 @@
           identityEl.style.color = '#555';
           identityEl.textContent = 'Could not detect name or email — will generate a generic profile';
         }
-      } catch (_) {
-        identityEl.style.display = 'none';
+      } catch (err) {
+        identityEl.style.color = '#f08080';
+        identityEl.textContent = '⚠ Identity detection failed: ' + err.message;
       }
     }
 

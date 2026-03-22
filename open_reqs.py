@@ -245,12 +245,10 @@ def _infer_identity_from_resume(resume_text: str) -> dict:
     )
 
     text = _run_via_claude_cli(prompt).strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```[^\n]*\n?", "", text)
-        text = re.sub(r"\n?```$", "", text)
-        text = text.strip()
-
-    result = json.loads(text)
+    m = re.search(r'\{[^{}]*"name"[^{}]*\}', text, re.DOTALL)
+    if not m:
+        raise ValueError(f"No JSON object found in response: {text[:200]}")
+    result = json.loads(m.group())
     return {"name": result.get("name", ""), "email": result.get("email", "")}
 
 
