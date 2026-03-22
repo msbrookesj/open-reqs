@@ -55,6 +55,12 @@ from pathlib import Path
 
 import yaml
 
+try:
+    import anthropic as _anthropic
+    _ANTHROPIC_AVAILABLE = True
+except ImportError:
+    _ANTHROPIC_AVAILABLE = False
+
 SCRIPT_DIR = Path(__file__).parent
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
@@ -1221,6 +1227,131 @@ def send_email_from_json(json_path: str, email_to: str,
     send_email(html, email_to, candidate_name, cc_addr=email_cc)
 
 
+def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> dict:
+    """Use Claude to evaluate search results and suggest profile improvements.
+
+    Returns a dict with keys:
+      explanation  — human-readable summary of changes made
+      profile      — updated profile dict
+    """
+    if not _ANTHROPIC_AVAILABLE:
+        raise RuntimeError(
+            "The 'anthropic' package is not installed. "
+            "Run: pip install anthropic"
+        )
+
+    client = _anthropic.Anthropic()
+
+    # Build a compact results summary to keep tokens down
+    results_summary = ""
+    if results and "sections" in results:
+        sections = results["sections"]
+        jobs = (
+            sections.get("today", []) +
+            sections.get("this_week", []) +
+            sections.get("older", [])
+        )
+        if jobs:
+            lines = []
+            for j in jobs[:30]:
+                reasons = ", ".join(j.get("detailReasons", []))
+                lines.append(
+                    f"  [{j.get('score', 0):>3}] {j.get('title', '')} — "
+                    f"{j.get('team', '')} ({j.get('experienceLevel', 'unknown level')})"
+                    + (f" | {reasons}" if reasons else "")
+                )
+            results_summary = (
+                f"\n\nCurrent search returned {len(jobs)} matching jobs "
+                f"({results.get('stats', {}).get('today', 0)} new today). "
+                f"Top matches:\n" + "\n".join(lines)
+            )
+
+    # Compact profile representation
+    boosts = profile.get("boost_keywords", {})
+    penalties = profile.get("penalty_keywords", {})
+    profile_summary = (
+        f"Candidate: {profile.get('name', '')}\n"
+        f"Locations: {profile.get('locations', [])}\n"
+        f"Queries: {profile.get('queries', [])}\n"
+        f"Pages per query: {profile.get('pages_per_query', 3)}\n"
+        f"Boost — strong: {boosts.get('strong', [])}\n"
+        f"Boost — moderate: {boosts.get('moderate', [])}\n"
+        f"Boost — light: {boosts.get('light', [])}\n"
+        f"Penalty — hard: {penalties.get('hard', [])}\n"
+        f"Penalty — soft: {penalties.get('soft', [])}"
+    )
+
+    user_feedback = message.strip() if message.strip() else "(no additional feedback provided)"
+
+    prompt = f"""You are an expert job-search profile optimizer for Apple's jobs.apple.com.
+
+Here is the candidate's current search profile:
+{profile_summary}
+{results_summary}
+
+User feedback / guidance:
+{user_feedback}
+
+Your task: improve this candidate's search profile to surface better-matched Apple job listings.
+
+Guidelines:
+- Queries should be specific job titles or role types likely to appear on Apple's careers site.
+- Boost keywords (strong/moderate/light) should match skills, technologies, and team names that are genuine strengths.
+- Penalty keywords should filter out roles that are a poor fit (wrong seniority, irrelevant domain, etc.).
+- Don't add generic filler; every keyword should have clear rationale.
+- Keep changes focused — don't overhaul everything, just improve what the results suggest needs work.
+
+Respond with ONLY a valid JSON object in this exact format (no markdown, no extra text):
+{{
+  "explanation": "A 2-4 sentence plain-English explanation of what you changed and why.",
+  "profile": {{
+    "name": "{profile.get('name', '')}",
+    "locations": [...],
+    "queries": [...],
+    "pages_per_query": {profile.get('pages_per_query', 3)},
+    "boost_keywords": {{
+      "strong": [...],
+      "moderate": [...],
+      "light": [...]
+    }},
+    "penalty_keywords": {{
+      "hard": [...],
+      "soft": [...]
+    }}
+  }}
+}}"""
+
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=4096,
+        thinking={"type": "adaptive"},
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    # Extract text content block
+    text = next(
+        (b.text for b in response.content if b.type == "text"),
+        ""
+    ).strip()
+
+    # Strip any accidental markdown fences
+    if text.startswith("```"):
+        text = re.sub(r"^```[^\n]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text)
+        text = text.strip()
+
+    result = json.loads(text)
+
+    # Merge non-editable fields back in (email, referrer info, base_url, etc.)
+    enhanced_profile = dict(profile)
+    enhanced_profile.update(result["profile"])
+
+    return {
+        "explanation": result.get("explanation", ""),
+        "profile": enhanced_profile,
+    }
+
+
 def run_server(port: int):
     """Run a local proxy server that serves the web UI and proxies API calls."""
     import http.server
@@ -1314,6 +1445,17 @@ def run_server(port: int):
                 try:
                     profile = json.loads(body)
                     self._json_ok(_run_candidate_search_web(profile))
+                except Exception as e:
+                    self._json_err(502, str(e))
+            elif self.path == "/api/ai-enhance":
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    req_data = json.loads(body)
+                    profile = req_data.get("profile", {})
+                    results = req_data.get("results", None)
+                    message = req_data.get("message", "")
+                    self._json_ok(_ai_enhance_profile(profile, results, message))
                 except Exception as e:
                     self._json_err(502, str(e))
             else:

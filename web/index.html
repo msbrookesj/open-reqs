@@ -204,6 +204,43 @@
       color: #7ee8a2;
     }
 
+    /* AI enhance button */
+    .ai-btn {
+      width: 100%;
+      background: rgba(126,232,162,0.12);
+      border: 1px solid rgba(126,232,162,0.25);
+      color: #7ee8a2;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .ai-btn:disabled { opacity: 0.35; cursor: default; }
+    .ai-btn:not(:disabled):hover { background: rgba(126,232,162,0.22); }
+
+    /* AI explanation banner */
+    .ai-banner {
+      background: rgba(30,60,45,0.55);
+      border: 1px solid rgba(126,232,162,0.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #a8e6bb;
+      line-height: 1.6;
+    }
+    .ai-banner-label {
+      font-size: 10px;
+      color: #7ee8a2;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 5px;
+    }
+
     /* Run button */
     .run-btn {
       background: rgba(168,216,255,0.18);
@@ -469,6 +506,12 @@
 
       <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span></div>
       <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
+      <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
+      <button class="ai-btn" id="ai-btn">Enhance &amp; Search →</button>
 
     </div>
 
@@ -789,7 +832,7 @@
     }
 
     // ── Render full results ───────────────────────────────────────────────────
-    function renderResults(d) {
+    function renderResults(d, aiExplanation) {
       const name = d.candidateName || '';
       const prof = d.profile || {};
       const ref  = d.referrer || {};
@@ -841,7 +884,15 @@
         section('All Open Positions',           'Older listings still worth a look',      secs.older     || [], 'js-older'),
       ].filter(Boolean).join('') || '<div class="no-results">No matching roles found this run.</div>';
 
+      const aiBannerHtml = aiExplanation
+        ? `<div class="ai-banner">
+             <div class="ai-banner-label">AI Enhancement — what changed</div>
+             ${esc(aiExplanation)}
+           </div>`
+        : '';
+
       document.getElementById('results-panel').innerHTML = `
+        ${aiBannerHtml}
         <div class="result-header">
           <h2>Job Matches for ${esc(name)}</h2>
           <div class="rh-date">${esc(d.date)}</div>
@@ -971,6 +1022,7 @@
             `<div class="error-box">Error: ${esc(data.error || res.statusText)}</div>`;
           return;
         }
+        lastResults = data;
         renderResults(data);
       } catch (err) {
         stopProgress();
@@ -984,6 +1036,84 @@
     }
 
     runBtn.addEventListener('click', runSearch);
+
+    // ── AI Enhanced Search ────────────────────────────────────────────────────
+    let lastResults = null;  // keep track of previous results for context
+
+    const aiBtn = document.getElementById('ai-btn');
+
+    async function aiEnhanceAndSearch() {
+      if (searching) return;
+      searching = true;
+      runBtn.disabled = true;
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Claude is thinking…';
+      startProgress(profile.name);
+
+      const panel = document.getElementById('results-panel');
+      // Show an AI-specific progress note
+      const phraseEl = document.getElementById('prog-phrase');
+      if (phraseEl) phraseEl.textContent = 'Claude is analyzing your profile and results…';
+
+      let aiExplanation = '';
+
+      try {
+        // Step 1: call /api/ai-enhance
+        const enhanceRes = await fetch('/api/ai-enhance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile,
+            results: lastResults,
+            message: document.getElementById('f-ai-message').value,
+          }),
+        });
+        const enhanceData = await enhanceRes.json();
+        if (!enhanceRes.ok) {
+          stopProgress();
+          panel.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(enhanceData.error || enhanceRes.statusText)}</div>`;
+          return;
+        }
+
+        aiExplanation = enhanceData.explanation || '';
+
+        // Step 2: apply the improved profile to the form
+        applyProfile({ ...loadedRawData, ...enhanceData.profile });
+        // applyProfile calls markClean; re-mark dirty since profile changed
+        markDirty();
+
+        // Update progress phrase for search phase
+        const phraseEl2 = document.getElementById('prog-phrase');
+        if (phraseEl2) phraseEl2.textContent = 'Profile enhanced — running search with improved settings…';
+
+        // Step 3: run the search with the new profile
+        const searchRes = await fetch('/api/candidate/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile),
+        });
+        const searchData = await searchRes.json();
+        stopProgress();
+
+        if (!searchRes.ok) {
+          panel.innerHTML = `<div class="error-box">Search failed: ${esc(searchData.error || searchRes.statusText)}</div>`;
+          return;
+        }
+
+        lastResults = searchData;
+        renderResults(searchData, aiExplanation);
+      } catch (err) {
+        stopProgress();
+        panel.innerHTML = `<div class="error-box">Error: ${esc(err.message)}</div>`;
+      } finally {
+        searching = false;
+        runBtn.disabled = false;
+        aiBtn.disabled = false;
+        aiBtn.textContent = 'Enhance & Search →';
+      }
+    }
+
+    aiBtn.addEventListener('click', aiEnhanceAndSearch);
 
     document.getElementById('profile-select').addEventListener('change', e => {
       if (e.target.value) loadProfile(e.target.value);
