@@ -690,6 +690,8 @@
       saveBtn.className = 'save-btn';
       dirtyDot.style.display = 'none';
       refreshDirtyDots();
+      // Re-render tag groups so bold/strikethrough indicators clear
+      Object.keys(tagGroups).forEach(renderTagGroup);
     }
 
     let profile = {
@@ -709,9 +711,9 @@
     // ── Tag group component ───────────────────────────────────────────────────
     const tagGroups = {};
 
-    function setupTagGroup(id, getArr, setArr, style) {
+    function setupTagGroup(id, getArr, setArr, style, getSaved) {
       const el = document.getElementById(id);
-      tagGroups[id] = { el, getArr, setArr, style };
+      tagGroups[id] = { el, getArr, setArr, style, getSaved: getSaved || (() => null) };
       el.addEventListener('click', () => {
         const inp = el.querySelector('.tag-add');
         if (inp) inp.focus();
@@ -720,13 +722,16 @@
     }
 
     function renderTagGroup(id) {
-      const { el, getArr, setArr, style } = tagGroups[id];
+      const { el, getArr, setArr, style, getSaved } = tagGroups[id];
       const items = getArr();
+      const saved = getSaved();
       el.innerHTML = '';
 
       items.forEach((item, i) => {
+        const isNew = saved !== null && !saved.includes(item);
         const span = document.createElement('span');
         span.className = `tag-item tg-${style}`;
+        if (isNew) span.style.fontWeight = '700';
         const txt = document.createTextNode(String(item));
         const x = document.createElement('span');
         x.className = 'x';
@@ -742,6 +747,19 @@
         span.appendChild(x);
         el.appendChild(span);
       });
+
+      // Removed items: in saved but no longer in current — shown with strikethrough
+      if (saved !== null) {
+        saved.filter(x => !items.includes(x)).forEach(item => {
+          const span = document.createElement('span');
+          span.className = `tag-item tg-${style}`;
+          span.style.textDecoration = 'line-through';
+          span.style.opacity = '0.4';
+          span.style.cursor = 'default';
+          span.textContent = String(item);
+          el.appendChild(span);
+        });
+      }
 
       const inp = document.createElement('input');
       inp.type = 'text';
@@ -774,32 +792,38 @@
     setupTagGroup('tg-queries',
       () => profile.queries,
       v => { profile.queries = v; markDirty(); },
-      'neutral');
+      'neutral',
+      () => loadedRawData?.queries ?? null);
 
     setupTagGroup('tg-boost-strong',
       () => profile.boost_keywords.strong,
       v => { profile.boost_keywords.strong = v; markDirty(); },
-      'strong');
+      'strong',
+      () => loadedRawData?.boost_keywords?.strong ?? null);
 
     setupTagGroup('tg-boost-moderate',
       () => profile.boost_keywords.moderate,
       v => { profile.boost_keywords.moderate = v; markDirty(); },
-      'moderate');
+      'moderate',
+      () => loadedRawData?.boost_keywords?.moderate ?? null);
 
     setupTagGroup('tg-boost-light',
       () => profile.boost_keywords.light,
       v => { profile.boost_keywords.light = v; markDirty(); },
-      'light');
+      'light',
+      () => loadedRawData?.boost_keywords?.light ?? null);
 
     setupTagGroup('tg-penalty-hard',
       () => profile.penalty_keywords.hard,
       v => { profile.penalty_keywords.hard = v; markDirty(); },
-      'hard');
+      'hard',
+      () => loadedRawData?.penalty_keywords?.hard ?? null);
 
     setupTagGroup('tg-penalty-soft',
       () => profile.penalty_keywords.soft,
       v => { profile.penalty_keywords.soft = v; markDirty(); },
-      'soft');
+      'soft',
+      () => loadedRawData?.penalty_keywords?.soft ?? null);
 
     // ── Simple field bindings ─────────────────────────────────────────────────
     document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; markDirty(); });
