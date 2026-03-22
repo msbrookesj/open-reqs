@@ -680,10 +680,8 @@
         <span id="dirty-dot" style="display:none;font-size:11px;color:#e8c84a;">● unsaved changes</span>
       </div>
       <div id="new-profile-row" style="display:none;margin-top:8px;">
-        <input class="field" id="new-profile-name" placeholder="Candidate full name…" style="margin-bottom:5px;" />
-
         <!-- Resume input for Claude-powered generation -->
-        <div class="group-label" style="margin-bottom:4px;">Resume <span style="color:#3a3a3c;">(optional — powers Generate)</span></div>
+        <div class="group-label" style="margin-bottom:4px;">Resume</div>
         <textarea class="field" id="new-profile-resume"
           placeholder="Paste resume text here…"
           style="min-height:72px;margin-bottom:5px;font-size:11px;"></textarea>
@@ -691,7 +689,8 @@
         <label id="new-profile-drop" class="resume-drop">
           Browse or drop a PDF / .txt file
         </label>
-        <div id="new-profile-file-status" style="font-size:10px;color:#555;margin-bottom:5px;display:none;"></div>
+        <div id="new-profile-file-status" style="font-size:10px;margin-bottom:4px;display:none;"></div>
+        <div id="new-profile-identity" style="font-size:10px;color:#7ee8a2;margin-bottom:5px;display:none;"></div>
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="save-btn dirty" id="new-profile-generate">Generate with Claude →</button>
@@ -1185,23 +1184,24 @@
     });
 
     // ── New profile ───────────────────────────────────────────────────────────
+    let _inferredName = '', _inferredEmail = '';
+
     document.getElementById('new-profile-btn').addEventListener('click', () => {
       const row = document.getElementById('new-profile-row');
       row.style.display = '';
-      document.getElementById('new-profile-name').value = '';
+      _inferredName = '';
+      _inferredEmail = '';
       document.getElementById('new-profile-resume').value = '';
       document.getElementById('new-profile-gen-status').style.display = 'none';
       document.getElementById('new-profile-file-status').style.display = 'none';
-      document.getElementById('new-profile-name').focus();
+      document.getElementById('new-profile-identity').style.display = 'none';
+      document.getElementById('new-profile-resume').focus();
     });
 
     document.getElementById('new-profile-cancel').addEventListener('click', () => {
       document.getElementById('new-profile-row').style.display = 'none';
     });
 
-    document.getElementById('new-profile-name').addEventListener('keydown', e => {
-      if (e.key === 'Escape') document.getElementById('new-profile-row').style.display = 'none';
-    });
 
     document.getElementById('new-profile-blank').addEventListener('click', createBlankProfile);
     document.getElementById('new-profile-generate').addEventListener('click', generateFromResume);
@@ -1252,15 +1252,45 @@
           document.getElementById('new-profile-resume').value = data.text;
           status.style.color = '#7ee8a2';
           status.textContent = `✓ Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`;
+          await inferIdentityFromResume(data.text);
         } else {
           const text = await file.text();
           document.getElementById('new-profile-resume').value = text;
           status.style.color = '#7ee8a2';
           status.textContent = `✓ Loaded ${file.name}`;
+          await inferIdentityFromResume(text);
         }
       } catch (err) {
         status.style.color = '#f08080';
         status.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    async function inferIdentityFromResume(resumeText) {
+      const identityEl = document.getElementById('new-profile-identity');
+      identityEl.style.color = '#555';
+      identityEl.textContent = 'Detecting name & email…';
+      identityEl.style.display = '';
+      try {
+        const res = await fetch('/api/profile/infer-identity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resume_text: resumeText }),
+        });
+        if (!res.ok) { identityEl.style.display = 'none'; return; }
+        const data = await res.json();
+        _inferredName = data.name || '';
+        _inferredEmail = data.email || '';
+        if (_inferredName || _inferredEmail) {
+          const parts = [_inferredName, _inferredEmail].filter(Boolean);
+          identityEl.style.color = '#7ee8a2';
+          identityEl.textContent = `✓ Detected: ${parts.join(' · ')}`;
+        } else {
+          identityEl.style.color = '#555';
+          identityEl.textContent = 'Could not detect name or email — will generate a generic profile';
+        }
+      } catch (_) {
+        identityEl.style.display = 'none';
       }
     }
 
@@ -1280,13 +1310,10 @@
     }
 
     async function createBlankProfile() {
-      const nameInput = document.getElementById('new-profile-name');
-      const name = nameInput.value.trim();
-      if (!name) { nameInput.focus(); return; }
-
+      const name = _inferredName || 'New Candidate';
       const filename = `${_newProfileSlug(name)}_profile.yaml`;
       const blank = {
-        name, email: '',
+        name, email: _inferredEmail || '',
         locations: ['SCV'], queries: [], pages_per_query: 3,
         boost_keywords:   { strong: [], moderate: [], light: [] },
         penalty_keywords: { hard:   [], soft:   [] },
@@ -1313,15 +1340,17 @@
     }
 
     async function generateFromResume() {
-      const nameInput = document.getElementById('new-profile-name');
-      const name = nameInput.value.trim();
-      if (!name) { nameInput.focus(); return; }
-
       const resumeText = document.getElementById('new-profile-resume').value.trim();
       if (!resumeText) {
         const go = confirm('No resume text found — Claude will generate a generic profile without your background. Continue?');
         if (!go) return;
       }
+
+      // Infer identity now if the file load didn't already trigger it
+      if (!_inferredName && resumeText) {
+        await inferIdentityFromResume(resumeText);
+      }
+      const name = _inferredName || 'Candidate';
       const filename = `${_newProfileSlug(name)}_profile.yaml`;
 
       const genBtn = document.getElementById('new-profile-generate');

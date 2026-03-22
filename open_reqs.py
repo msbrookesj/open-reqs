@@ -228,6 +228,32 @@ def _write_workflow(profile_filename: str, profile: dict, cron: str) -> None:
         wf.write_text(content)
 
 
+def _infer_identity_from_resume(resume_text: str) -> dict:
+    """Use the Claude CLI to extract the candidate's name and email from resume text.
+
+    Returns {"name": str, "email": str} — empty strings if not found.
+    """
+    if not _CLAUDE_BIN:
+        raise RuntimeError("NOT_AUTHENTICATED")
+
+    prompt = (
+        "Extract the candidate's full name and email address from the resume below.\n"
+        "Respond with ONLY a valid JSON object, no markdown:\n"
+        '{"name": "Full Name", "email": "email@example.com"}\n'
+        "Use empty string for any field not found in the resume.\n\n"
+        f"Resume:\n{resume_text[:4000]}"
+    )
+
+    text = _run_via_claude_cli(prompt).strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[^\n]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text)
+        text = text.strip()
+
+    result = json.loads(text)
+    return {"name": result.get("name", ""), "email": result.get("email", "")}
+
+
 def _generate_profile_from_resume(name: str, resume_text: str) -> dict:
     """Use the Claude CLI to generate a candidate profile from a name and resume text.
 
@@ -265,7 +291,7 @@ Respond with ONLY a valid JSON object (no markdown, no extra text):
   "explanation": "2-3 sentences about the search strategy for this candidate.",
   "profile": {{
     "name": "{name}",
-    "email": "",
+    "email": "(candidate's email address extracted from the resume, or empty string if not found)",
     "locations": [],
     "queries": [],
     "pages_per_query": 3,
@@ -1783,6 +1809,16 @@ def run_server(port: int):
                     self._json_ok({"text": text})
                 except Exception as e:
                     self._json_err(500, str(e))
+
+            elif self.path == "/api/profile/infer-identity":
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    req_data = json.loads(body)
+                    resume_text = req_data.get("resume_text", "")
+                    self._json_ok(_infer_identity_from_resume(resume_text))
+                except Exception as e:
+                    self._json_err(502, str(e))
 
             elif self.path == "/api/git/deploy":
                 try:
