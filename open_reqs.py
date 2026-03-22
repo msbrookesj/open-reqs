@@ -1512,6 +1512,25 @@ def run_server(port: int):
         print("  Note: 'anthropic' package not found — AI Enhanced Search will be unavailable.")
         print("  Install with: pip3 install anthropic  (or: pip3 install -r requirements.txt)\n")
 
+    # Check claude CLI
+    if not _CLAUDE_BIN:
+        print("  Warning: 'claude' command not found — AI Enhanced Search will be unavailable.")
+        print("  Install Claude Code: https://claude.ai/download\n")
+    else:
+        version = subprocess.run([_CLAUDE_BIN, "--version"], capture_output=True, text=True).stdout.strip()
+        claude_json = Path.home() / ".claude.json"
+        authed = False
+        if claude_json.exists():
+            try:
+                authed = bool(json.loads(claude_json.read_text()).get("oauthAccount"))
+            except Exception:
+                pass
+        if authed:
+            print(f"  Claude Code: {version} ✓")
+        else:
+            print(f"  Claude Code: {version} — not signed in")
+            print("  Run 'claude' once to complete sign-in before using AI Enhanced Search.\n")
+
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
         print(f"\n  Job Search running at http://localhost:{port}")
         print(f"  Press Ctrl+C to stop.\n")
