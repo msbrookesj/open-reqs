@@ -8,17 +8,6 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 
 ```bash
 pip3 install -r requirements.txt
-
-# Search from the command line
-python open_reqs.py
-
-# Search for a specific role in specific locations
-python open_reqs.py -q "backend software engineer" -l SVL SCV
-
-# Output as JSON for scripting
-python open_reqs.py -q "data analyst" --json
-
-# Launch the web UI
 python open_reqs.py --serve
 # Then open http://localhost:8080
 ```
