@@ -637,7 +637,7 @@
         <div class="staged-explain" id="staged-explain"></div>
         <div id="staged-diff"></div>
         <div class="staged-actions">
-          <button class="apply-btn" id="apply-btn">Apply &amp; Search →</button>
+          <button class="apply-btn" id="apply-btn">Apply</button>
           <button class="discard-btn" id="discard-btn">Discard</button>
         </div>
       </div>
@@ -1410,11 +1410,9 @@
 
     function applyStagedChanges() {
       if (!pendingProfile) return;
-      const explanation = pendingExplanation;
       applyProfile({ ...loadedRawData, ...pendingProfile });
       markDirty();
       dismissStagedChanges();
-      runSearch(explanation);
     }
 
     document.getElementById('apply-btn').addEventListener('click', applyStagedChanges);
