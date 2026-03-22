@@ -7,7 +7,7 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 ## Quick start
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 # Search from the command line
 python open_reqs.py
@@ -39,7 +39,7 @@ Run `python open_reqs.py --serve` to start a local proxy server. The UI is a two
 
 ### AI Enhanced Search
 
-Uses Claude Opus to analyze the current profile (and optionally the most recent search results) and propose improvements. Requires `ANTHROPIC_API_KEY` in the environment and `pip install anthropic`.
+Uses Claude Opus to analyze the current profile (and optionally the most recent search results) and propose improvements. Requires `ANTHROPIC_API_KEY` in the environment and `pip3 install anthropic`.
 
 1. Optionally type guidance in the feedback box (e.g. "too many senior roles, focus more on data")
 2. Click **Enhance** (no prior results) or **Enhance from Results** (after a search) — the button is disabled until one of those conditions is met
@@ -158,7 +158,7 @@ Jobs below the minimum score threshold are filtered out before display.
 ## Dependencies
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 | Package | Required for |

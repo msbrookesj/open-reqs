@@ -1237,7 +1237,7 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
     if not _ANTHROPIC_AVAILABLE:
         raise RuntimeError(
             "The 'anthropic' package is not installed. "
-            "Run: pip install anthropic"
+            "Run: pip3 install anthropic"
         )
 
     client = _anthropic.Anthropic()
@@ -1497,7 +1497,7 @@ def run_server(port: int):
 
     if not _ANTHROPIC_AVAILABLE:
         print("  Note: 'anthropic' package not found — AI Enhanced Search will be unavailable.")
-        print("  Install with: pip install anthropic  (or: pip install -r requirements.txt)\n")
+        print("  Install with: pip3 install anthropic  (or: pip3 install -r requirements.txt)\n")
 
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
         print(f"\n  Job Search running at http://localhost:{port}")
