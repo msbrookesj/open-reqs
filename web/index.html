@@ -557,6 +557,27 @@
 
       <div class="divider"></div>
 
+      <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
+      <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
+
+      <!-- Staged changes panel (hidden until AI returns a proposal) -->
+      <div class="staged-panel" id="staged-panel" style="display:none">
+        <div class="staged-hdr">
+          <span class="staged-hdr-label">Proposed Changes</span>
+          <button class="staged-close" id="staged-close" title="Dismiss">✕</button>
+        </div>
+        <div class="staged-explain" id="staged-explain"></div>
+        <div id="staged-diff"></div>
+        <div class="staged-actions">
+          <button class="apply-btn" id="apply-btn">Apply &amp; Search →</button>
+          <button class="discard-btn" id="discard-btn">Discard</button>
+        </div>
+      </div>
+
+      <button class="ai-btn" id="ai-btn">Enhance</button>
+
+      <div class="divider"></div>
+
       <div class="sec-label">Candidate Name <span class="fdot" id="fdot-name"></span></div>
       <input class="field" id="f-name" type="text" placeholder="Full name..." />
 
@@ -594,27 +615,6 @@
 
       <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-notes"></span></div>
       <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
-
-      <div class="divider"></div>
-
-      <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
-      <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
-
-      <!-- Staged changes panel (hidden until AI returns a proposal) -->
-      <div class="staged-panel" id="staged-panel" style="display:none">
-        <div class="staged-hdr">
-          <span class="staged-hdr-label">Proposed Changes</span>
-          <button class="staged-close" id="staged-close" title="Dismiss">✕</button>
-        </div>
-        <div class="staged-explain" id="staged-explain"></div>
-        <div id="staged-diff"></div>
-        <div class="staged-actions">
-          <button class="apply-btn" id="apply-btn">Apply &amp; Search →</button>
-          <button class="discard-btn" id="discard-btn">Discard</button>
-        </div>
-      </div>
-
-      <button class="ai-btn" id="ai-btn">Enhance</button>
 
     </div>
 
