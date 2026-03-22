@@ -179,6 +179,31 @@
     }
     .settings-row input { width: 64px; }
 
+    /* Save button */
+    .save-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #888;
+      border-radius: 7px;
+      padding: 5px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .save-btn:disabled { opacity: 0.3; cursor: default; }
+    .save-btn.dirty {
+      background: rgba(232,200,74,0.12);
+      border-color: rgba(232,200,74,0.35);
+      color: #e8c84a;
+    }
+    .save-btn.dirty:hover { background: rgba(232,200,74,0.2); }
+    .save-btn.saved {
+      background: rgba(30,80,50,0.4);
+      border-color: rgba(126,232,162,0.4);
+      color: #7ee8a2;
+    }
+
     /* Run button */
     .run-btn {
       background: rgba(168,216,255,0.18);
@@ -400,6 +425,10 @@
       <select class="profile-select" id="profile-select">
         <option value="">— select a profile —</option>
       </select>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:7px;">
+        <button class="save-btn" id="save-btn" disabled>Save</button>
+        <span id="dirty-dot" style="display:none;font-size:11px;color:#e8c84a;">● unsaved changes</span>
+      </div>
 
       <div class="divider"></div>
 
@@ -456,6 +485,29 @@
 
   <script>
     // ── State ─────────────────────────────────────────────────────────────────
+    let currentFile = null;      // filename of the loaded profile
+    let loadedRawData = null;    // full original data (preserves email, base_url, etc.)
+    let dirty = false;
+
+    const saveBtn = document.getElementById('save-btn');
+    const dirtyDot = document.getElementById('dirty-dot');
+
+    function markDirty() {
+      if (!currentFile) return;
+      dirty = true;
+      saveBtn.disabled = false;
+      saveBtn.className = 'save-btn dirty';
+      saveBtn.textContent = 'Save';
+      dirtyDot.style.display = '';
+    }
+
+    function markClean() {
+      dirty = false;
+      saveBtn.disabled = true;
+      saveBtn.className = 'save-btn';
+      dirtyDot.style.display = 'none';
+    }
+
     let profile = {
       name: '',
       locations: [],
@@ -537,40 +589,40 @@
     // ── Wire up tag groups ────────────────────────────────────────────────────
     setupTagGroup('tg-queries',
       () => profile.queries,
-      v => { profile.queries = v; },
+      v => { profile.queries = v; markDirty(); },
       'neutral');
 
     setupTagGroup('tg-boost-strong',
       () => profile.boost_keywords.strong,
-      v => { profile.boost_keywords.strong = v; },
+      v => { profile.boost_keywords.strong = v; markDirty(); },
       'strong');
 
     setupTagGroup('tg-boost-moderate',
       () => profile.boost_keywords.moderate,
-      v => { profile.boost_keywords.moderate = v; },
+      v => { profile.boost_keywords.moderate = v; markDirty(); },
       'moderate');
 
     setupTagGroup('tg-boost-light',
       () => profile.boost_keywords.light,
-      v => { profile.boost_keywords.light = v; },
+      v => { profile.boost_keywords.light = v; markDirty(); },
       'light');
 
     setupTagGroup('tg-penalty-hard',
       () => profile.penalty_keywords.hard,
-      v => { profile.penalty_keywords.hard = v; },
+      v => { profile.penalty_keywords.hard = v; markDirty(); },
       'hard');
 
     setupTagGroup('tg-penalty-soft',
       () => profile.penalty_keywords.soft,
-      v => { profile.penalty_keywords.soft = v; },
+      v => { profile.penalty_keywords.soft = v; markDirty(); },
       'soft');
 
     // ── Simple field bindings ─────────────────────────────────────────────────
-    document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; });
-    document.getElementById('f-pages').addEventListener('input', e => { profile.pages_per_query = parseInt(e.target.value) || 3; });
-    document.getElementById('f-ref-name').addEventListener('input', e => { profile.referrer_name = e.target.value; });
-    document.getElementById('f-ref-phone').addEventListener('input', e => { profile.referrer_phone = e.target.value; });
-    document.getElementById('f-notes').addEventListener('input', e => { profile.referral_notes = e.target.value; });
+    document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; markDirty(); });
+    document.getElementById('f-pages').addEventListener('input', e => { profile.pages_per_query = parseInt(e.target.value) || 3; markDirty(); });
+    document.getElementById('f-ref-name').addEventListener('input', e => { profile.referrer_name = e.target.value; markDirty(); });
+    document.getElementById('f-ref-phone').addEventListener('input', e => { profile.referrer_phone = e.target.value; markDirty(); });
+    document.getElementById('f-notes').addEventListener('input', e => { profile.referral_notes = e.target.value; markDirty(); });
 
     // ── Location chips ────────────────────────────────────────────────────────
     function renderLocChips() {
@@ -586,6 +638,7 @@
           if (idx >= 0) profile.locations.splice(idx, 1);
           else profile.locations.push(code);
           renderLocChips();
+          markDirty();
         });
         container.appendChild(btn);
       });
@@ -593,6 +646,8 @@
 
     // ── Load profile from server ──────────────────────────────────────────────
     function applyProfile(data) {
+      loadedRawData = data;  // preserve all fields (email, base_url, etc.)
+
       profile.name             = data.name             || '';
       profile.locations        = data.locations        || [];
       profile.queries          = data.queries          || [];
@@ -612,14 +667,72 @@
       renderLocChips();
       ['tg-queries','tg-boost-strong','tg-boost-moderate','tg-boost-light',
        'tg-penalty-hard','tg-penalty-soft'].forEach(renderTagGroup);
+
+      markClean();
     }
 
     async function loadProfile(filename) {
       try {
         const r = await fetch(`/api/profile/${encodeURIComponent(filename)}`);
-        if (r.ok) applyProfile(await r.json());
+        if (r.ok) {
+          currentFile = filename;
+          applyProfile(await r.json());
+        }
       } catch (_) {}
     }
+
+    // ── Save profile ──────────────────────────────────────────────────────────
+    async function saveProfile() {
+      if (!currentFile || !loadedRawData) return;
+
+      // Merge edited fields back into the full original data
+      const toSave = {
+        ...loadedRawData,
+        name:             profile.name,
+        locations:        profile.locations,
+        queries:          profile.queries,
+        boost_keywords:   profile.boost_keywords,
+        penalty_keywords: profile.penalty_keywords,
+        pages_per_query:  profile.pages_per_query,
+        referrer_name:    profile.referrer_name,
+        referrer_phone:   profile.referrer_phone,
+        referral_notes:   profile.referral_notes,
+      };
+
+      saveBtn.textContent = 'Saving…';
+      saveBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/profile/${encodeURIComponent(currentFile)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(toSave),
+        });
+        if (res.ok) {
+          loadedRawData = toSave;
+          markClean();
+          saveBtn.className = 'save-btn saved';
+          saveBtn.textContent = 'Saved ✓';
+          setTimeout(() => {
+            saveBtn.className = 'save-btn';
+            saveBtn.textContent = 'Save';
+          }, 2000);
+        } else {
+          const d = await res.json();
+          saveBtn.disabled = false;
+          saveBtn.className = 'save-btn dirty';
+          saveBtn.textContent = 'Save';
+          alert('Save failed: ' + (d.error || res.statusText));
+        }
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.className = 'save-btn dirty';
+        saveBtn.textContent = 'Save';
+        alert('Save failed: ' + err.message);
+      }
+    }
+
+    saveBtn.addEventListener('click', saveProfile);
 
     // ── Render helpers ────────────────────────────────────────────────────────
     function esc(s) {

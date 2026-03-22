@@ -1320,10 +1320,32 @@ def run_server(port: int):
                 self.send_response(404)
                 self.end_headers()
 
+        def do_PUT(self):
+            if self.path.startswith("/api/profile/"):
+                filename = self.path[len("/api/profile/"):]
+                if "/" in filename or ".." in filename or not filename.endswith(".yaml"):
+                    self.send_response(400)
+                    self.end_headers()
+                    return
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    data = json.loads(body)
+                    profile_path = SCRIPT_DIR / filename
+                    with open(profile_path, "w") as f:
+                        yaml.dump(data, f, default_flow_style=False,
+                                  allow_unicode=True, sort_keys=False)
+                    self._json_ok({"saved": filename})
+                except Exception as e:
+                    self._json_err(500, str(e))
+            else:
+                self.send_response(404)
+                self.end_headers()
+
         def do_OPTIONS(self):
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             self.end_headers()
 
