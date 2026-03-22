@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apple Jobs Search — Referral Tool</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0d0d0f;
+      color: #e8e8e8;
+      font-family: 'DM Mono', monospace;
+      padding: 40px 24px;
+    }
+    input:focus, button:focus { outline: none; }
+    a { color: #a8d8ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 760px; margin: 0 auto; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(168,216,255,0.08); border: 1px solid rgba(168,216,255,0.15);
+      border-radius: 8px; padding: 4px 12px; margin-bottom: 16px;
+      font-size: 11px; color: #a8d8ff; letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    h1 { font-size: 28px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+    .subtitle { margin-top: 8px; color: #666; font-size: 13px; }
+
+    .section-label {
+      font-size: 11px; color: #555; margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: #888; border-radius: 8px; padding: 5px 12px; font-size: 12px;
+      cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s;
+    }
+    .chip:hover { border-color: rgba(255,255,255,0.2); color: #aaa; }
+    .chip.active {
+      background: rgba(168,216,255,0.15); border-color: rgba(168,216,255,0.4); color: #a8d8ff;
+    }
+
+    .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-input {
+      flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 14px;
+      font-family: 'DM Mono', monospace;
+    }
+    .search-btn {
+      background: rgba(168,216,255,0.2); border: 1px solid rgba(168,216,255,0.3);
+      color: #a8d8ff; border-radius: 10px; padding: 12px 24px; font-size: 13px;
+      font-weight: 600; cursor: pointer; font-family: 'DM Mono', monospace; white-space: nowrap;
+    }
+    .search-btn:disabled { opacity: 0.4; cursor: default; }
+    .search-btn:not(:disabled):hover { background: rgba(168,216,255,0.3); }
+
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin-bottom: 24px; }
+
+    .job-card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; transition: border-color 0.2s;
+    }
+    .job-card:hover { border-color: rgba(255,255,255,0.25); }
+    .job-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .job-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
+    .job-meta { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      font-family: 'DM Mono', monospace;
+    }
+    .tag-team { background: rgba(168,216,255,0.12); color: #a8d8ff; }
+    .tag-loc { background: rgba(255,255,255,0.06); color: #aaa; }
+    .tag-date { background: rgba(255,255,255,0.06); color: #888; }
+    .req-id {
+      background: rgba(168,216,255,0.1); border: 1px solid rgba(168,216,255,0.2);
+      border-radius: 8px; padding: 4px 10px; font-size: 12px; color: #a8d8ff;
+      white-space: nowrap; user-select: all; cursor: text; flex-shrink: 0;
+    }
+
+    .warning-box {
+      background: rgba(255,180,50,0.07); border: 1px solid rgba(255,180,50,0.2);
+      border-radius: 10px; padding: 16px 18px; color: #ffcc66; font-size: 13px; margin-bottom: 16px;
+    }
+    .warning-box strong { color: #ffcc66; }
+    .warning-box .detail { color: #aa8844; font-size: 12px; line-height: 1.6; margin-top: 6px; }
+
+    .error-box {
+      background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2);
+      border-radius: 10px; padding: 14px 18px; color: #ff8888; font-size: 13px; margin-bottom: 16px;
+    }
+
+    .status { margin-bottom: 16px; font-size: 13px; color: #555; }
+    .empty { text-align: center; padding: 60px 0; color: #333; font-size: 13px; }
+    .footer {
+      margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 20px; font-size: 11px; color: #333; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div style="margin-bottom: 32px;">
+      <div class="badge">Live · jobs.apple.com API</div>
+      <h1>Apple Jobs Search</h1>
+      <p class="subtitle">Find roles for employee referrals — search, filter, grab the Req ID</p>
+    </div>
+
+    <!-- Quick search chips -->
+    <div style="margin-bottom: 16px;">
+      <div class="section-label">Quick searches</div>
+      <div class="chip-row" id="keyword-chips"></div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-row">
+      <input class="search-input" id="query-input" placeholder="e.g. early career backend engineer..." />
+      <button class="search-btn" id="search-btn">Search →</button>
+    </div>
+
+    <!-- Location chips -->
+    <div style="margin-bottom: 28px;">
+      <div class="section-label">Locations</div>
+      <div class="chip-row" id="location-chips"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Results -->
+    <div id="results"></div>
+
+    <div class="footer">
+      Req IDs are click-to-select. Links open the live Apple job posting. Data is real-time from jobs.apple.com.<br>
+      Run via: <code>python apple_jobs.py --serve</code>
+    </div>
+  </div>
+
+  <script>
+    const KEYWORDS = [
+      { label: "Early Career", value: "early career software engineer" },
+      { label: "Backend Engineer", value: "backend software engineer" },
+      { label: "iOS / Swift", value: "iOS swift engineer" },
+      { label: "IS&T Engineer", value: "IS&T software engineer" },
+      { label: "AiDP / AI Data", value: "AiDP AI data engineer" },
+      { label: "Data Analyst", value: "data analyst" },
+      { label: "SAP / Enterprise", value: "SAP enterprise systems" },
+      { label: "Python Engineer", value: "python software engineer" },
+    ];
+
+    const LOCATIONS = [
+      { label: "Santa Clara Valley / Cupertino", value: "postLocation-SCV" },
+      { label: "Sunnyvale", value: "postLocation-SVL" },
+      { label: "Campbell / San Jose", value: "postLocation-SJOS" },
+      { label: "All US", value: "postLocation-USA" },
+      { label: "Austin", value: "postLocation-AUS" },
+      { label: "Seattle", value: "postLocation-SEA" },
+      { label: "New York City", value: "postLocation-NYC" },
+      { label: "San Diego", value: "postLocation-SDG" },
+    ];
+
+    // Use local proxy when served from python apple_jobs.py --serve
+    // Falls back to direct API call (will CORS-fail in browser without proxy)
+    const API_URL = window.location.hostname === "localhost"
+      ? "/api/role/search"
+      : "https://jobs.apple.com/api/role/search";
+
+    let query = "early career software engineer";
+    let selectedLocations = new Set(["postLocation-SCV", "postLocation-SVL"]);
+    let loading = false;
+
+    const queryInput = document.getElementById("query-input");
+    const searchBtn = document.getElementById("search-btn");
+    const resultsDiv = document.getElementById("results");
+
+    queryInput.value = query;
+
+    // Render keyword chips
+    const kwContainer = document.getElementById("keyword-chips");
+    KEYWORDS.forEach(k => {
+      const btn = document.createElement("button");
+      btn.className = "chip" + (query === k.value ? " active" : "");
+      btn.textContent = k.label;
+      btn.onclick = () => {
+        query = k.value;
+        queryInput.value = query;
+        kwContainer.querySelectorAll(".chip").forEach(c =>
+          c.classList.toggle("active", c.textContent === k.label)
+        );
+      };
+      kwContainer.appendChild(btn);
+    });
+
+    // Render location chips
+    const locContainer = document.getElementById("location-chips");
+    LOCATIONS.forEach(l => {
+      const btn = document.createElement("button");
+      btn.className = "chip" + (selectedLocations.has(l.value) ? " active" : "");
+      btn.textContent = (selectedLocations.has(l.value) ? "✓ " : "") + l.label;
+      btn.onclick = () => {
+        if (selectedLocations.has(l.value)) {
+          selectedLocations.delete(l.value);
+        } else {
+          selectedLocations.add(l.value);
+        }
+        btn.className = "chip" + (selectedLocations.has(l.value) ? " active" : "");
+        btn.textContent = (selectedLocations.has(l.value) ? "✓ " : "") + l.label;
+      };
+      locContainer.appendChild(btn);
+    });
+
+    queryInput.addEventListener("input", e => { query = e.target.value; });
+    queryInput.addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+    searchBtn.addEventListener("click", search);
+
+    function makeJobUrl(job) {
+      const reqId = job.positionId || job.id || "";
+      const title = (job.postingTitle || job.title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      return `https://jobs.apple.com/en-us/details/${reqId}/${title}`;
+    }
+
+    async function search() {
+      if (!query.trim() || selectedLocations.size === 0 || loading) return;
+      loading = true;
+      searchBtn.disabled = true;
+      searchBtn.textContent = "Searching...";
+      resultsDiv.innerHTML = "";
+
+      try {
+        const payload = {
+          query: query.trim(),
+          locale: "en-us",
+          filters: { postingpostLocation: [...selectedLocations] },
+          page: 1,
+        };
+
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error(`API responded with ${res.status}`);
+        const data = await res.json();
+
+        const jobs = data.searchResults || [];
+        const total = data.totalRecords || jobs.length;
+
+        if (jobs.length === 0) {
+          resultsDiv.innerHTML = '<div class="status">No results found.</div>';
+          return;
+        }
+
+        resultsDiv.innerHTML = `<div class="status">Showing ${jobs.length} of ${total} results</div>`;
+
+        jobs.forEach(job => {
+          const reqId = job.positionId || job.id || "—";
+          const title = job.postingTitle || job.title || "Untitled";
+          const location = (job.locations || [])[0]?.name || "";
+          const team = (job.team || {}).teamName || "";
+          const posted = job.postingDate ? new Date(job.postingDate).toLocaleDateString() : "";
+          const url = makeJobUrl(job);
+
+          const card = document.createElement("div");
+          card.className = "job-card";
+          card.innerHTML = `
+            <div class="job-header">
+              <div style="flex:1">
+                <a href="${url}" target="_blank" rel="noopener noreferrer" class="job-title">${escapeHtml(title)}</a>
+                <div class="job-meta">
+                  ${team ? `<span class="tag tag-team">${escapeHtml(team)}</span>` : ""}
+                  <span class="tag tag-loc">${escapeHtml(location)}</span>
+                  ${posted ? `<span class="tag tag-date">${posted}</span>` : ""}
+                </div>
+              </div>
+              <div class="req-id">${escapeHtml(reqId)}</div>
+            </div>
+          `;
+          resultsDiv.appendChild(card);
+        });
+
+      } catch (err) {
+        if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("CORS")) {
+          resultsDiv.innerHTML = `
+            <div class="warning-box">
+              <div style="font-weight:600;margin-bottom:6px">⚠ CORS blocked by Apple's API</div>
+              <div class="detail">
+                Apple's jobs API doesn't allow direct browser requests. Run the built-in proxy server instead:
+                <br><br>
+                <code style="color:#ffcc66">python apple_jobs.py --serve</code>
+                <br><br>
+                Then open <a href="http://localhost:8080" style="color:#ffcc66">http://localhost:8080</a> in your browser.
+              </div>
+            </div>`;
+        } else {
+          resultsDiv.innerHTML = `<div class="error-box">⚠ ${escapeHtml(err.message)}</div>`;
+        }
+      } finally {
+        loading = false;
+        searchBtn.disabled = false;
+        searchBtn.textContent = "Search →";
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
