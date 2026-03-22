@@ -33,13 +33,10 @@ Usage:
 """
 
 import argparse
-import base64
-import hashlib
 import json
 import math
 import os
 import re
-import secrets
 import smtplib
 import ssl
 import sys
@@ -66,52 +63,8 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).parent
 
-# ── OAuth state (in-memory; cleared on server restart) ────────────────────────
-_auth_token: str | None = None          # Bearer token once signed in
-_oauth_pending: dict = {}               # state → {code_verifier, client_id, redirect_uri}
-
-_OAUTH_AUTH_URL   = "https://api.anthropic.com/authorize"
-_OAUTH_TOKEN_URL  = "https://api.anthropic.com/token"
-_OAUTH_REG_URL    = "https://api.anthropic.com/register"
-
-
-def _pkce_pair() -> tuple[str, str]:
-    """Return (code_verifier, code_challenge) for PKCE S256."""
-    verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b"=").decode()
-    challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(verifier.encode()).digest()
-    ).rstrip(b"=").decode()
-    return verifier, challenge
-
-
-def _oauth_register(redirect_uri: str) -> str:
-    """Dynamically register a public client; return the client_id."""
-    body = json.dumps({
-        "client_name": "open-reqs",
-        "redirect_uris": [redirect_uri],
-        "token_endpoint_auth_method": "none",
-        "grant_types": ["authorization_code"],
-    }).encode()
-    req = urllib.request.Request(_OAUTH_REG_URL, data=body,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, context=_SSL_CTX) as resp:
-        return json.loads(resp.read())["client_id"]
-
-
-def _oauth_exchange(code: str, verifier: str, client_id: str, redirect_uri: str) -> dict:
-    """Exchange an authorization code for tokens; return the full token response."""
-    body = urllib.parse.urlencode({
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "client_id": client_id,
-        "code_verifier": verifier,
-    }).encode()
-    req = urllib.request.Request(_OAUTH_TOKEN_URL, data=body,
-                                 headers={"Content-Type": "application/x-www-form-urlencoded"},
-                                 method="POST")
-    with urllib.request.urlopen(req, context=_SSL_CTX) as resp:
-        return json.loads(resp.read())
+# ── API key (in-memory; cleared on server restart) ────────────────────────────
+_api_key: str | None = None
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
 
@@ -1290,11 +1243,11 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
             "Run: pip3 install anthropic"
         )
 
-    if not _auth_token and not os.environ.get("ANTHROPIC_API_KEY"):
+    if not _api_key and not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError("NOT_AUTHENTICATED")
 
     client = _anthropic.Anthropic(
-        **({"auth_token": _auth_token} if _auth_token else {})
+        **({"api_key": _api_key} if _api_key else {})
     )
 
     # Build a compact results summary to keep tokens down
@@ -1440,7 +1393,7 @@ def run_server(port: int):
             self.wfile.write(body)
 
         def do_GET(self):
-            global _auth_token
+            global _api_key
             if self.path == "/api/locations":
                 self._json_ok({k: v["label"] for k, v in LOCATIONS.items()})
             elif self.path == "/api/profiles":
@@ -1464,74 +1417,28 @@ def run_server(port: int):
                 with open(profile_path) as f:
                     self._json_ok(yaml.safe_load(f))
 
-            # ── OAuth ──────────────────────────────────────────────────────────
+            # ── Auth ───────────────────────────────────────────────────────────
             elif self.path == "/api/auth/status":
-                self._json_ok({"authenticated": bool(_auth_token or os.environ.get("ANTHROPIC_API_KEY"))})
-
-            elif self.path == "/api/auth/login":
-                port = self.server.server_address[1]
-                redirect_uri = f"http://localhost:{port}/oauth/callback"
-                try:
-                    client_id = _oauth_register(redirect_uri)
-                    verifier, challenge = _pkce_pair()
-                    state = secrets.token_urlsafe(16)
-                    _oauth_pending[state] = {
-                        "code_verifier": verifier,
-                        "client_id": client_id,
-                        "redirect_uri": redirect_uri,
-                    }
-                    auth_url = (
-                        f"{_OAUTH_AUTH_URL}"
-                        f"?response_type=code"
-                        f"&client_id={urllib.parse.quote(client_id)}"
-                        f"&redirect_uri={urllib.parse.quote(redirect_uri)}"
-                        f"&code_challenge={challenge}"
-                        f"&code_challenge_method=S256"
-                        f"&state={state}"
-                    )
-                    self._json_ok({"url": auth_url})
-                except Exception as e:
-                    self._json_err(502, str(e))
-
-            elif self.path.startswith("/oauth/callback"):
-                parsed = urllib.parse.urlparse(self.path)
-                params = dict(urllib.parse.parse_qsl(parsed.query))
-                state = params.get("state", "")
-                code  = params.get("code", "")
-                error = params.get("error", "")
-
-                pending = _oauth_pending.pop(state, None)
-                if error or not pending or not code:
-                    msg = error or "Invalid callback parameters"
-                    html = f"<html><body style='font-family:monospace;padding:40px;background:#0d0d0f;color:#f08080'><h2>Sign-in failed</h2><p>{msg}</p><p><a href='/' style='color:#a8d8ff'>← Back</a></p></body></html>"
-                    body = html.encode()
-                    self.send_response(400)
-                    self.send_header("Content-Type", "text/html")
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
-                    return
-
-                try:
-                    token_resp = _oauth_exchange(code, pending["code_verifier"],
-                                                 pending["client_id"], pending["redirect_uri"])
-                    _auth_token = token_resp.get("access_token")
-                    self.send_response(302)
-                    self.send_header("Location", "/?auth=success")
-                    self.end_headers()
-                except Exception as e:
-                    html = f"<html><body style='font-family:monospace;padding:40px;background:#0d0d0f;color:#f08080'><h2>Sign-in failed</h2><p>{e}</p><p><a href='/' style='color:#a8d8ff'>← Back</a></p></body></html>"
-                    body = html.encode()
-                    self.send_response(500)
-                    self.send_header("Content-Type", "text/html")
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
+                self._json_ok({"authenticated": bool(_api_key or os.environ.get("ANTHROPIC_API_KEY"))})
 
             else:
                 super().do_GET()
 
         def do_POST(self):
+            global _api_key
+            if self.path == "/api/auth/key":
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len)
+                try:
+                    key = json.loads(body).get("api_key", "").strip()
+                    if not key.startswith("sk-"):
+                        self._json_err(400, "That doesn't look like a valid API key (should start with sk-)")
+                        return
+                    _api_key = key
+                    self._json_ok({"ok": True})
+                except Exception as e:
+                    self._json_err(400, str(e))
+                return
             if self.path == "/api/role/search":
                 content_len = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_len)

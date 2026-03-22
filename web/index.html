@@ -240,26 +240,39 @@
       color: #a8d8ff;
     }
 
-    /* Sign-in button */
-    .signin-btn {
-      width: 100%;
+    /* Auth area */
+    .auth-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .auth-row input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e8e8e8;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    .auth-row input:focus { outline: none; border-color: rgba(168,216,255,0.35); }
+    .auth-connect-btn {
       background: rgba(168,216,255,0.08);
       border: 1px solid rgba(168,216,255,0.2);
       color: #a8d8ff;
       border-radius: 8px;
-      padding: 8px 14px;
+      padding: 7px 12px;
       font-size: 12px;
-      font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
-      text-align: center;
+      white-space: nowrap;
       transition: all 0.15s;
-      margin-bottom: 8px;
     }
-    .signin-btn:hover { background: rgba(168,216,255,0.15); }
+    .auth-connect-btn:hover { background: rgba(168,216,255,0.15); }
     .auth-status {
       font-size: 10px;
       color: #555;
-      text-align: center;
       margin-bottom: 8px;
     }
     .auth-status.ok { color: #7ee8a2; }
@@ -648,8 +661,11 @@
 
       <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
       <div id="auth-area">
-        <button class="signin-btn" id="signin-btn">Sign in with Claude</button>
-        <div class="auth-status" id="auth-status"></div>
+        <div class="auth-row">
+          <input type="password" id="api-key-input" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" />
+          <button class="auth-connect-btn" id="signin-btn">Connect</button>
+        </div>
+        <div class="auth-status" id="auth-status">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></div>
       </div>
       <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
 
@@ -1560,66 +1576,58 @@
 
     aiBtn.addEventListener('click', aiEnhanceAndSearch);
 
-    // ── Auth / sign-in ────────────────────────────────────────────────────────
-    let authOk = false;
-    let authPollTimer = null;
-
+    // ── Auth ──────────────────────────────────────────────────────────────────
     async function checkAuth() {
       try {
-        const r = await fetch('/api/auth/status');
-        const d = await r.json();
-        authOk = d.authenticated;
-        const btn    = document.getElementById('signin-btn');
+        const d = await fetch('/api/auth/status').then(r => r.json());
+        const area   = document.getElementById('auth-area');
         const status = document.getElementById('auth-status');
-        if (authOk) {
-          btn.style.display = 'none';
-          status.textContent = '✓ Signed in';
+        if (d.authenticated) {
+          area.style.display = 'none';
+          status.textContent = '✓ Connected';
           status.className = 'auth-status ok';
-        } else {
-          btn.style.display = '';
-          status.textContent = '';
-          status.className = 'auth-status';
+          area.parentNode.insertBefore(status, area);
         }
       } catch (_) {}
     }
 
     document.getElementById('signin-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('signin-btn');
-      btn.textContent = 'Opening…';
+      const key = document.getElementById('api-key-input').value.trim();
+      if (!key) { document.getElementById('api-key-input').focus(); return; }
+      const btn    = document.getElementById('signin-btn');
+      const status = document.getElementById('auth-status');
       btn.disabled = true;
+      btn.textContent = '…';
       try {
-        const r = await fetch('/api/auth/login');
-        const d = await r.json();
-        if (d.url) {
-          window.open(d.url, '_blank');
-          btn.textContent = 'Waiting for sign-in…';
-          // Poll until authenticated (up to 5 min)
-          let tries = 0;
-          authPollTimer = setInterval(async () => {
-            await checkAuth();
-            tries++;
-            if (authOk || tries > 300) {
-              clearInterval(authPollTimer);
-              btn.disabled = false;
-              if (!authOk) btn.textContent = 'Sign in with Claude';
-            }
-          }, 1000);
+        const res = await fetch('/api/auth/key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key }),
+        });
+        const d = await res.json();
+        if (res.ok) {
+          document.getElementById('auth-area').style.display = 'none';
+          status.textContent = '✓ Connected';
+          status.className = 'auth-status ok';
+          document.getElementById('auth-area').parentNode.insertBefore(
+            status, document.getElementById('auth-area'));
         } else {
-          btn.textContent = 'Sign in with Claude';
+          status.textContent = d.error || 'Connection failed';
+          status.className = 'auth-status';
           btn.disabled = false;
-          alert('Could not start sign-in: ' + (d.error || 'unknown error'));
+          btn.textContent = 'Connect';
         }
       } catch (err) {
-        btn.textContent = 'Sign in with Claude';
+        status.textContent = err.message;
+        status.className = 'auth-status';
         btn.disabled = false;
-        alert('Could not start sign-in: ' + err.message);
+        btn.textContent = 'Connect';
       }
     });
 
-    // Show success notice if redirected back after OAuth
-    if (new URLSearchParams(location.search).get('auth') === 'success') {
-      history.replaceState({}, '', '/');
-    }
+    document.getElementById('api-key-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('signin-btn').click();
+    });
 
     checkAuth();
 
