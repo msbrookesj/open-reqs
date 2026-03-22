@@ -240,36 +240,7 @@
       color: #a8d8ff;
     }
 
-    /* Auth area */
-    .auth-row {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-    .auth-row input {
-      flex: 1;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 7px 10px;
-      color: #e8e8e8;
-      font-size: 12px;
-      font-family: inherit;
-    }
-    .auth-row input:focus { outline: none; border-color: rgba(168,216,255,0.35); }
-    .auth-connect-btn {
-      background: rgba(168,216,255,0.08);
-      border: 1px solid rgba(168,216,255,0.2);
-      color: #a8d8ff;
-      border-radius: 8px;
-      padding: 7px 12px;
-      font-size: 12px;
-      font-family: inherit;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s;
-    }
-    .auth-connect-btn:hover { background: rgba(168,216,255,0.15); }
+    /* Auth status */
     .auth-status {
       font-size: 10px;
       color: #555;
@@ -660,13 +631,7 @@
       <div class="divider"></div>
 
       <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
-      <div id="auth-area">
-        <div class="auth-row">
-          <input type="password" id="api-key-input" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" />
-          <button class="auth-connect-btn" id="signin-btn">Connect</button>
-        </div>
-        <div class="auth-status" id="auth-status">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></div>
-      </div>
+      <div class="auth-status" id="auth-status"></div>
       <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
 
       <!-- Staged changes panel (hidden until AI returns a proposal) -->
@@ -1580,54 +1545,16 @@
     async function checkAuth() {
       try {
         const d = await fetch('/api/auth/status').then(r => r.json());
-        const area   = document.getElementById('auth-area');
         const status = document.getElementById('auth-status');
         if (d.authenticated) {
-          area.style.display = 'none';
-          status.textContent = d.method === 'cli' ? '✓ Using local Claude install' : '✓ Connected';
+          status.textContent = '✓ Using local Claude install';
           status.className = 'auth-status ok';
-          area.parentNode.insertBefore(status, area);
+        } else {
+          status.textContent = 'claude CLI not found — install Claude Code to use AI features';
+          status.className = 'auth-status';
         }
       } catch (_) {}
     }
-
-    document.getElementById('signin-btn').addEventListener('click', async () => {
-      const key = document.getElementById('api-key-input').value.trim();
-      if (!key) { document.getElementById('api-key-input').focus(); return; }
-      const btn    = document.getElementById('signin-btn');
-      const status = document.getElementById('auth-status');
-      btn.disabled = true;
-      btn.textContent = '…';
-      try {
-        const res = await fetch('/api/auth/key', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: key }),
-        });
-        const d = await res.json();
-        if (res.ok) {
-          document.getElementById('auth-area').style.display = 'none';
-          status.textContent = '✓ Connected';
-          status.className = 'auth-status ok';
-          document.getElementById('auth-area').parentNode.insertBefore(
-            status, document.getElementById('auth-area'));
-        } else {
-          status.textContent = d.error || 'Connection failed';
-          status.className = 'auth-status';
-          btn.disabled = false;
-          btn.textContent = 'Connect';
-        }
-      } catch (err) {
-        status.textContent = err.message;
-        status.className = 'auth-status';
-        btn.disabled = false;
-        btn.textContent = 'Connect';
-      }
-    });
-
-    document.getElementById('api-key-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('signin-btn').click();
-    });
 
     checkAuth();
 

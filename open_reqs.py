@@ -65,25 +65,6 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).parent
 
-# ── API key ───────────────────────────────────────────────────────────────────
-_API_KEY_FILE = SCRIPT_DIR / ".api_key"
-
-def _load_api_key() -> str | None:
-    """Return the first API key found: env var → .api_key file."""
-    if k := os.environ.get("ANTHROPIC_API_KEY"):
-        return k
-    if _API_KEY_FILE.exists():
-        k = _API_KEY_FILE.read_text().strip()
-        if k:
-            return k
-    return None
-
-def _save_api_key(key: str) -> None:
-    _API_KEY_FILE.write_text(key)
-    _API_KEY_FILE.chmod(0o600)
-
-_api_key: str | None = _load_api_key()
-
 # ── Local claude CLI ──────────────────────────────────────────────────────────
 _CLAUDE_BIN: str | None = shutil.which("claude")
 
@@ -1277,9 +1258,7 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
             "Run: pip3 install anthropic"
         )
 
-    key = _api_key or os.environ.get("ANTHROPIC_API_KEY")
-    use_cli = not key and bool(_CLAUDE_BIN)
-    if not key and not use_cli:
+    if not _CLAUDE_BIN:
         raise RuntimeError("NOT_AUTHENTICATED")
 
     # Build a compact results summary to keep tokens down
@@ -1361,20 +1340,7 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no extr
   }}
 }}"""
 
-    if use_cli:
-        text = _run_via_claude_cli(prompt).strip()
-    else:
-        client = _anthropic.Anthropic(api_key=key)
-        response = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=4096,
-            thinking={"type": "adaptive"},
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = next(
-            (b.text for b in response.content if b.type == "text"),
-            ""
-        ).strip()
+    text = _run_via_claude_cli(prompt).strip()
 
     # Strip any accidental markdown fences
     if text.startswith("```"):
@@ -1427,7 +1393,6 @@ def run_server(port: int):
             self.wfile.write(body)
 
         def do_GET(self):
-            global _api_key
             if self.path == "/api/locations":
                 self._json_ok({k: v["label"] for k, v in LOCATIONS.items()})
             elif self.path == "/api/profiles":
@@ -1453,30 +1418,12 @@ def run_server(port: int):
 
             # ── Auth ───────────────────────────────────────────────────────────
             elif self.path == "/api/auth/status":
-                self._json_ok({
-                    "authenticated": bool(_api_key or _CLAUDE_BIN),
-                    "method": "api_key" if _api_key else ("cli" if _CLAUDE_BIN else None),
-                })
+                self._json_ok({"authenticated": bool(_CLAUDE_BIN)})
 
             else:
                 super().do_GET()
 
         def do_POST(self):
-            global _api_key
-            if self.path == "/api/auth/key":
-                content_len = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_len)
-                try:
-                    key = json.loads(body).get("api_key", "").strip()
-                    if not key.startswith("sk-"):
-                        self._json_err(400, "That doesn't look like a valid API key (should start with sk-)")
-                        return
-                    _api_key = key
-                    _save_api_key(key)
-                    self._json_ok({"ok": True})
-                except Exception as e:
-                    self._json_err(400, str(e))
-                return
             if self.path == "/api/role/search":
                 content_len = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_len)
