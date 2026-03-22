@@ -37,8 +37,10 @@ import json
 import math
 import os
 import re
+import shutil
 import smtplib
 import ssl
+import subprocess
 import sys
 import textwrap
 import threading
@@ -81,6 +83,22 @@ def _save_api_key(key: str) -> None:
     _API_KEY_FILE.chmod(0o600)
 
 _api_key: str | None = _load_api_key()
+
+# ── Local claude CLI ──────────────────────────────────────────────────────────
+_CLAUDE_BIN: str | None = shutil.which("claude")
+
+def _run_via_claude_cli(prompt: str) -> str:
+    """Send a prompt to the locally installed claude CLI and return the response text."""
+    result = subprocess.run(
+        [_CLAUDE_BIN, "-p", prompt, "--output-format", "json"],
+        capture_output=True, text=True, timeout=180,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "claude CLI exited with an error")
+    data = json.loads(result.stdout)
+    if data.get("is_error"):
+        raise RuntimeError(data.get("result", "claude CLI returned an error"))
+    return data["result"]
 
 DEFAULT_BASE_URL = "https://jobs.apple.com"
 
@@ -1260,10 +1278,9 @@ def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> di
         )
 
     key = _api_key or os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
+    use_cli = not key and bool(_CLAUDE_BIN)
+    if not key and not use_cli:
         raise RuntimeError("NOT_AUTHENTICATED")
-
-    client = _anthropic.Anthropic(api_key=key)
 
     # Build a compact results summary to keep tokens down
     results_summary = ""
@@ -1344,18 +1361,20 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no extr
   }}
 }}"""
 
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=4096,
-        thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    # Extract text content block
-    text = next(
-        (b.text for b in response.content if b.type == "text"),
-        ""
-    ).strip()
+    if use_cli:
+        text = _run_via_claude_cli(prompt).strip()
+    else:
+        client = _anthropic.Anthropic(api_key=key)
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            thinking={"type": "adaptive"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = next(
+            (b.text for b in response.content if b.type == "text"),
+            ""
+        ).strip()
 
     # Strip any accidental markdown fences
     if text.startswith("```"):
@@ -1434,7 +1453,10 @@ def run_server(port: int):
 
             # ── Auth ───────────────────────────────────────────────────────────
             elif self.path == "/api/auth/status":
-                self._json_ok({"authenticated": bool(_api_key)})
+                self._json_ok({
+                    "authenticated": bool(_api_key or _CLAUDE_BIN),
+                    "method": "api_key" if _api_key else ("cli" if _CLAUDE_BIN else None),
+                })
 
             else:
                 super().do_GET()

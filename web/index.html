@@ -1584,7 +1584,7 @@
         const status = document.getElementById('auth-status');
         if (d.authenticated) {
           area.style.display = 'none';
-          status.textContent = '✓ Connected';
+          status.textContent = d.method === 'cli' ? '✓ Using local Claude install' : '✓ Connected';
           status.className = 'auth-status ok';
           area.parentNode.insertBefore(status, area);
         }
