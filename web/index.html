@@ -223,6 +223,23 @@
       color: #7ee8a2;
     }
 
+    /* New profile button */
+    .new-profile-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #555;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .new-profile-btn:hover {
+      border-color: rgba(168,216,255,0.3);
+      color: #a8d8ff;
+    }
+
     /* Per-field dirty indicator */
     .fdot {
       display: none;
@@ -592,7 +609,15 @@
       <div style="display:flex;align-items:center;gap:8px;margin-top:7px;">
         <button class="save-btn" id="save-btn" disabled>Save</button>
         <button class="revert-btn" id="revert-btn" disabled>Revert</button>
+        <button class="new-profile-btn" id="new-profile-btn">+ New</button>
         <span id="dirty-dot" style="display:none;font-size:11px;color:#e8c84a;">● unsaved changes</span>
+      </div>
+      <div id="new-profile-row" style="display:none;margin-top:8px;">
+        <input class="field" id="new-profile-name" placeholder="Candidate full name…" style="margin-bottom:5px;" />
+        <div style="display:flex;gap:6px;">
+          <button class="save-btn dirty" id="new-profile-create">Create Profile</button>
+          <button class="revert-btn" id="new-profile-cancel">Cancel</button>
+        </div>
       </div>
 
       <div class="divider"></div>
@@ -1033,6 +1058,74 @@
       if (!loadedRawData) return;
       applyProfile(loadedRawData);
     });
+
+    // ── New profile ───────────────────────────────────────────────────────────
+    document.getElementById('new-profile-btn').addEventListener('click', () => {
+      const row = document.getElementById('new-profile-row');
+      row.style.display = '';
+      document.getElementById('new-profile-name').value = '';
+      document.getElementById('new-profile-name').focus();
+    });
+
+    document.getElementById('new-profile-cancel').addEventListener('click', () => {
+      document.getElementById('new-profile-row').style.display = 'none';
+    });
+
+    document.getElementById('new-profile-name').addEventListener('keydown', e => {
+      if (e.key === 'Enter')  createNewProfile();
+      if (e.key === 'Escape') document.getElementById('new-profile-row').style.display = 'none';
+    });
+
+    document.getElementById('new-profile-create').addEventListener('click', createNewProfile);
+
+    async function createNewProfile() {
+      const nameInput = document.getElementById('new-profile-name');
+      const name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      const filename = `${slug}_profile.yaml`;
+
+      const blank = {
+        name,
+        email: '',
+        locations: ['SCV'],
+        queries: [],
+        pages_per_query: 3,
+        boost_keywords:   { strong: [], moderate: [], light: [] },
+        penalty_keywords: { hard:   [], soft:   [] },
+        referrer_name:  '',
+        referrer_phone: '',
+        referrer_email: '',
+        referral_notes: '',
+      };
+
+      try {
+        const res = await fetch(`/api/profile/${encodeURIComponent(filename)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(blank),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          alert('Could not create profile: ' + (d.error || res.statusText));
+          return;
+        }
+        // Add to the select if not already present, then load it
+        const sel = document.getElementById('profile-select');
+        if (!Array.from(sel.options).some(o => o.value === filename)) {
+          const opt = document.createElement('option');
+          opt.value = filename;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        }
+        sel.value = filename;
+        await loadProfile(filename);
+        document.getElementById('new-profile-row').style.display = 'none';
+      } catch (err) {
+        alert('Could not create profile: ' + err.message);
+      }
+    }
 
     // ── Render helpers ────────────────────────────────────────────────────────
     function esc(s) {
