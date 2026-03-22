@@ -240,6 +240,30 @@
       color: #a8d8ff;
     }
 
+    /* Sign-in button */
+    .signin-btn {
+      width: 100%;
+      background: rgba(168,216,255,0.08);
+      border: 1px solid rgba(168,216,255,0.2);
+      color: #a8d8ff;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .signin-btn:hover { background: rgba(168,216,255,0.15); }
+    .auth-status {
+      font-size: 10px;
+      color: #555;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .auth-status.ok { color: #7ee8a2; }
+
     /* Per-field dirty indicator */
     .fdot {
       display: none;
@@ -623,6 +647,10 @@
       <div class="divider"></div>
 
       <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
+      <div id="auth-area">
+        <button class="signin-btn" id="signin-btn">Sign in with Claude</button>
+        <div class="auth-status" id="auth-status"></div>
+      </div>
       <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
 
       <!-- Staged changes panel (hidden until AI returns a proposal) -->
@@ -1505,7 +1533,15 @@
         });
         const enhanceData = await enhanceRes.json();
         if (!enhanceRes.ok) {
-          content.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(enhanceData.error || enhanceRes.statusText)}</div>`;
+          const errMsg = enhanceData.error || enhanceRes.statusText;
+          if (errMsg === 'NOT_AUTHENTICATED') {
+            content.innerHTML = prev;
+            document.getElementById('signin-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('signin-btn').style.outline = '1px solid rgba(168,216,255,0.5)';
+            setTimeout(() => document.getElementById('signin-btn').style.outline = '', 2000);
+          } else {
+            content.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(errMsg)}</div>`;
+          }
           return;
         }
         // Restore previous results content while user reviews the proposal
@@ -1523,6 +1559,69 @@
     }
 
     aiBtn.addEventListener('click', aiEnhanceAndSearch);
+
+    // ── Auth / sign-in ────────────────────────────────────────────────────────
+    let authOk = false;
+    let authPollTimer = null;
+
+    async function checkAuth() {
+      try {
+        const r = await fetch('/api/auth/status');
+        const d = await r.json();
+        authOk = d.authenticated;
+        const btn    = document.getElementById('signin-btn');
+        const status = document.getElementById('auth-status');
+        if (authOk) {
+          btn.style.display = 'none';
+          status.textContent = '✓ Signed in';
+          status.className = 'auth-status ok';
+        } else {
+          btn.style.display = '';
+          status.textContent = '';
+          status.className = 'auth-status';
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('signin-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('signin-btn');
+      btn.textContent = 'Opening…';
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/auth/login');
+        const d = await r.json();
+        if (d.url) {
+          window.open(d.url, '_blank');
+          btn.textContent = 'Waiting for sign-in…';
+          // Poll until authenticated (up to 5 min)
+          let tries = 0;
+          authPollTimer = setInterval(async () => {
+            await checkAuth();
+            tries++;
+            if (authOk || tries > 300) {
+              clearInterval(authPollTimer);
+              btn.disabled = false;
+              if (!authOk) btn.textContent = 'Sign in with Claude';
+            }
+          }, 1000);
+        } else {
+          btn.textContent = 'Sign in with Claude';
+          btn.disabled = false;
+          alert('Could not start sign-in: ' + (d.error || 'unknown error'));
+        }
+      } catch (err) {
+        btn.textContent = 'Sign in with Claude';
+        btn.disabled = false;
+        alert('Could not start sign-in: ' + err.message);
+      }
+    });
+
+    // Show success notice if redirected back after OAuth
+    if (new URLSearchParams(location.search).get('auth') === 'success') {
+      history.replaceState({}, '', '/');
+    }
+
+    checkAuth();
 
     document.getElementById('profile-select').addEventListener('change', e => {
       if (e.target.value) loadProfile(e.target.value);
