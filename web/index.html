@@ -1187,8 +1187,14 @@
     const aiBtn = document.getElementById('ai-btn');
 
     function updateAiBtn() {
+      const hasInput = document.getElementById('f-ai-message').value.trim().length > 0;
+      const enabled = hasInput || !!lastResults;
+      aiBtn.disabled = !enabled;
       aiBtn.textContent = lastResults ? 'Enhance from Results' : 'Enhance';
     }
+
+    document.getElementById('f-ai-message').addEventListener('input', updateAiBtn);
+    updateAiBtn();
 
     // ── Profile diff helpers ──────────────────────────────────────────────────
     function buildProfileDiff(oldP, newP) {
