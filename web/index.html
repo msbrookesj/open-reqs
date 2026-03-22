@@ -700,6 +700,8 @@
         <div id="new-profile-gen-status" style="font-size:10px;color:#555;margin-top:5px;display:none;"></div>
       </div>
 
+      <div id="profile-content">
+
       <div class="divider"></div>
 
       <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
@@ -789,6 +791,8 @@
         <span id="schedule-status" style="font-size:10px;display:none;"></span>
       </div>
       <div class="schedule-hint" style="margin-top:6px;">Schedule changes must be deployed to take effect.</div>
+
+      </div> <!-- #profile-content -->
 
     </div>
 
@@ -1186,21 +1190,26 @@
     // ── New profile ───────────────────────────────────────────────────────────
     let _inferredName = '', _inferredEmail = '';
 
-    document.getElementById('new-profile-btn').addEventListener('click', () => {
-      const row = document.getElementById('new-profile-row');
-      row.style.display = '';
+    function _openNewProfileForm() {
       _inferredName = '';
       _inferredEmail = '';
       document.getElementById('new-profile-resume').value = '';
       document.getElementById('new-profile-gen-status').style.display = 'none';
       document.getElementById('new-profile-file-status').style.display = 'none';
       document.getElementById('new-profile-identity').style.display = 'none';
+      document.getElementById('new-profile-row').style.display = '';
+      document.getElementById('profile-content').style.display = 'none';
       document.getElementById('new-profile-resume').focus();
-    });
+    }
 
-    document.getElementById('new-profile-cancel').addEventListener('click', () => {
+    function _closeNewProfileForm() {
       document.getElementById('new-profile-row').style.display = 'none';
-    });
+      document.getElementById('profile-content').style.display = '';
+    }
+
+    document.getElementById('new-profile-btn').addEventListener('click', _openNewProfileForm);
+
+    document.getElementById('new-profile-cancel').addEventListener('click', _closeNewProfileForm);
 
 
     document.getElementById('new-profile-blank').addEventListener('click', createBlankProfile);
@@ -1333,7 +1342,7 @@
         }
         _addProfileToSelect(filename, name);
         await loadProfile(filename);
-        document.getElementById('new-profile-row').style.display = 'none';
+        _closeNewProfileForm();
       } catch (err) {
         alert('Could not create profile: ' + err.message);
       }
@@ -1377,7 +1386,7 @@
         currentFile = filename;
         applyProfile(data.profile);
         fetchWorkflowInfo(filename);
-        document.getElementById('new-profile-row').style.display = 'none';
+        _closeNewProfileForm();
         refreshGitStatus();
 
         if (data.explanation) {
