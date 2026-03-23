@@ -1,0 +1,24 @@
+name: "Brooke Ryan"
+email: "brooke@msbrookesj.com"
+locations: [SCV, SVL, SJOS]
+queries:
+  - "software engineer"
+  - "iOS engineer"
+  - "full stack engineer"
+  - "front end engineer"
+  - "platform engineer"
+pages_per_query: 3
+
+boost_keywords:
+  strong: [Python, Swift, JavaScript, iOS, software engineer]
+  moderate: [cloud, web, Bootstrap, frontend, backend, full stack, API]
+  light: [machine learning, data, accessibility, developer tools, health]
+
+penalty_keywords:
+  hard: [senior, lead, manager, principal, staff, director]
+  soft: [hardware, firmware, electrical, mechanical, RF]
+
+referrer_name: ""
+referrer_phone: ""
+referrer_email: ""
+referral_notes: "UCSD CS alumna, currently a software engineer at Apple. Looking for new opportunities within Apple."
