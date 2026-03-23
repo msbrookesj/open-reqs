@@ -417,7 +417,10 @@ def _load_candidate_profile(path: str | Path | None = None) -> dict:
         return yaml.safe_load(f)
 
 
-CANDIDATE_PROFILE = _load_candidate_profile()
+try:
+    CANDIDATE_PROFILE = _load_candidate_profile()
+except FileNotFoundError:
+    CANDIDATE_PROFILE = {}
 
 
 def score_job(job: dict) -> int:
