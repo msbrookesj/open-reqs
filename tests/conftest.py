@@ -154,7 +154,7 @@ def server_url(profiles_dir):
             super().__init__(*args, directory=str(web_dir), **kwargs)
 
         def log_message(self, format, *args):
-            pass  # silence server logs during tests
+            pass
 
     # Copy the API methods from ProxyHandler
     # We need to actually use the real ProxyHandler — re-import after patching
@@ -346,7 +346,10 @@ def server_url(profiles_dir):
         def log_message(self, format, *args):
             pass
 
-    server = socketserver.TCPServer(("127.0.0.1", port), ProxyHandler)
+    # Use ThreadingTCPServer so concurrent browser requests (page + API fetches)
+    # don't deadlock — the browser makes parallel requests during init().
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    server = socketserver.ThreadingTCPServer(("127.0.0.1", port), ProxyHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
 
@@ -368,6 +371,32 @@ def server_url(profiles_dir):
     server.shutdown()
     for p in patches:
         p.stop()
+
+
+# ── Playwright fixtures ──────────────────────────────────────────────────────
+# We provide our own browser/page fixtures instead of using pytest-playwright's
+# built-in ones, because those don't integrate cleanly with our server_url fixture.
+
+@pytest.fixture(scope="session")
+def browser():
+    """Launch a headless Chromium browser for the test session."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    pw = sync_playwright().start()
+    b = pw.chromium.launch()
+    yield b
+    b.close()
+    pw.stop()
+
+
+@pytest.fixture()
+def page(browser):
+    """Create a fresh browser page for each test."""
+    p = browser.new_page()
+    yield p
+    p.close()
 
 
 # ── HTTP helpers for tests ────────────────────────────────────────────────────
