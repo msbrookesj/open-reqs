@@ -81,7 +81,7 @@ python open_reqs.py --candidate --email user@example.com --cc contact@example.co
 
 | File | Candidate | Target level | Locations |
 |------|-----------|-------------|-----------|
-| `brooke_ryan_profile.yaml` | Brooke Ryan | Entry-level / early career | SCV, SVL, SJOS |
+| `brooke_ryan_profile.yaml` | Brooke Ryan | Senior / experienced | SCV, SVL, SJOS |
 | `candidate_profile.yaml` | Christine Ryan | Entry-level / early career | SCV, SVL, SJOS |
 | `kevin_katz_profile.yaml` | Kevin Katz | Senior / experienced | CUL, IRV |
 | `lauren_ernst_profile.yaml` | Lauren Ernst | — | — |
