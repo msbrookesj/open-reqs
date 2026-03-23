@@ -112,7 +112,7 @@ All Claude calls go through `_run_via_claude_cli(prompt)` — a subprocess wrapp
 ## Git deploy
 
 - **`_git_status()`** — runs `git status --porcelain` + `git rev-list @{u}..HEAD --count`; returns `{changedFiles, commitsAhead}`
-- **`_git_deploy()`** — globs `*_profile.yaml` and `.github/workflows/*-job-search.yml`, stages them, commits, and pushes; never stages unrelated files
+- **`_git_deploy()`** — globs `profiles/*_profile.yaml` and `.github/workflows/*-job-search.yml`, stages them, commits, and pushes; never stages unrelated files
 
 ## Conventions
 

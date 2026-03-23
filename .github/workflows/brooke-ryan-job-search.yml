@@ -1,0 +1,77 @@
+name: Brooke Ryan's Job Search
+
+on:
+  workflow_dispatch:
+    inputs:
+      email_to:
+        description: "Who should receive the email digest?"
+        required: true
+        type: choice
+        default: "none"
+        options:
+          - "none"
+          - "brooke@msbrookesj.com"
+  schedule:
+    - cron: "0 14 * * *"
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip3 install pyyaml
+
+      - name: Read candidate profile
+        id: profile
+        run: |
+          python3 -c "
+          import yaml
+          with open('profiles/brooke_ryan_profile.yaml') as f:
+              p = yaml.safe_load(f)
+          print(f\"email={p['email']}\")
+          print(f\"referrer_email={p.get('referrer_email', '')}\")
+          print(f\"name={p['name']}\")
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Run candidate job search and export JSON
+        run: python3 open_reqs.py --candidate --profile profiles/brooke_ryan_profile.yaml --limit 50 --json > results.json
+
+      - name: Send email digest
+        if: ${{ github.event.inputs.email_to != 'none' || github.event_name == 'schedule' }}
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        run: |
+          INPUT="${{ github.event.inputs.email_to }}"
+          if [ -n "$INPUT" ] && [ "$INPUT" != "none" ]; then
+            EMAIL="$INPUT"
+          else
+            EMAIL="${{ steps.profile.outputs.email }}"
+          fi
+          python3 open_reqs.py --profile profiles/brooke_ryan_profile.yaml --from-json results.json --email "$EMAIL" --cc "${{ steps.profile.outputs.referrer_email }}"
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-results
+          path: results.json
+          retention-days: 7
+
+      - name: Upload email digest artifact
+        if: ${{ github.event.inputs.email_to != 'none' || github.event_name == 'schedule' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: email-digest
+          path: email_digest.html
+          retention-days: 7

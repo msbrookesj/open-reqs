@@ -1,0 +1,25 @@
+name: "Brooke Ryan"
+email: "brooke@msbrookesj.com"
+locations: [SCV, SVL, SJOS]
+queries:
+  - "software engineer"
+  - "senior software engineer"
+  - "engineering manager"
+  - "CoreOS engineer"
+  - "systems engineer"
+  - "cloud infrastructure engineer"
+pages_per_query: 3
+
+boost_keywords:
+  strong: [C, Objective-C, Swift, Java, CoreOS, iCloud, CloudKit, networking]
+  moderate: [software update, asset routing, telemetry, infrastructure, server, client, operating systems]
+  light: [machine learning, AI, performance, diagnostics, mobile, protocols]
+
+penalty_keywords:
+  hard: [intern, internship, entry level, new grad, junior]
+  soft: [hardware, firmware, electrical, mechanical, RF]
+
+referrer_name: ""
+referrer_phone: ""
+referrer_email: ""
+referral_notes: "UCSD CS alumna. 13 years at Apple spanning iCloud Server, iCloud Client, Engineering Management, and CoreOS. Experienced in systems programming (C, Obj-C, Swift, Java), networking, and cloud infrastructure."
