@@ -81,6 +81,7 @@ python open_reqs.py --candidate --email user@example.com --cc contact@example.co
 
 | File | Candidate | Target level | Locations |
 |------|-----------|-------------|-----------|
+| `brooke_ryan_profile.yaml` | Brooke Ryan | Entry-level / early career | SCV, SVL, SJOS |
 | `candidate_profile.yaml` | Christine Ryan | Entry-level / early career | SCV, SVL, SJOS |
 | `kevin_katz_profile.yaml` | Kevin Katz | Senior / experienced | CUL, IRV |
 | `lauren_ernst_profile.yaml` | Lauren Ernst | — | — |
@@ -115,6 +116,7 @@ Each candidate has a workflow that can run the search and optionally email resul
 
 | Workflow | File | Schedule |
 |----------|------|----------|
+| Brooke's Job Search | `.github/workflows/brooke-ryan-job-search.yml` | Daily at 7:00 AM PT + manual |
 | Christine's Job Search | `.github/workflows/christine-job-search.yml` | Daily at 12:37 PM PT + manual |
 | Kevin's Job Search | `.github/workflows/kevin-katz-job-search.yml` | Manual |
 | Lauren's Job Search | `.github/workflows/lauren-ernst-job-search.yml` | Manual |
