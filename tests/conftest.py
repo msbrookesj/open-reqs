@@ -94,23 +94,6 @@ def profiles_dir(tmp_path_factory):
     return d
 
 
-def _ensure_default_profile():
-    """Ensure the default candidate_profile.yaml exists so open_reqs can import.
-
-    The module loads CANDIDATE_PROFILE at import time from profiles/candidate_profile.yaml.
-    If it doesn't exist (e.g. in CI), create a minimal one so the import succeeds.
-    We patch it to TEST_PROFILE immediately after import anyway.
-    """
-    repo_root = Path(__file__).resolve().parent.parent
-    default_profile = repo_root / "profiles" / "candidate_profile.yaml"
-    if not default_profile.exists():
-        default_profile.parent.mkdir(parents=True, exist_ok=True)
-        with open(default_profile, "w") as f:
-            yaml.dump(TEST_PROFILE, f, default_flow_style=False)
-        return default_profile  # caller should clean up
-    return None
-
-
 @pytest.fixture(scope="session")
 def server_url(profiles_dir):
     """Start the real ProxyHandler on a random port, with external calls mocked.
@@ -130,9 +113,6 @@ def server_url(profiles_dir):
 
     # We need to set up the web dir so static files resolve
     web_dir = Path(__file__).resolve().parent.parent / "web"
-
-    # Ensure default profile exists so open_reqs module can import
-    temp_profile = _ensure_default_profile()
 
     # Import the module so we can patch its globals
     import open_reqs
