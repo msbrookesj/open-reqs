@@ -88,7 +88,8 @@ class TestProfileLoading:
     def test_load_profile_populates_boost_keywords(self, page: Page, server_url):
         _load_profile(page, server_url)
         strong_tags = page.locator("#tg-boost-strong .tag-item")
-        assert strong_tags.count() >= 3, "Strong boost tags not rendered"
+        # Use expect() so Playwright retries until the tags appear (handles CI timing)
+        expect(strong_tags).to_have_count(3)
 
     def test_load_profile_populates_pages(self, page: Page, server_url):
         _load_profile(page, server_url)
