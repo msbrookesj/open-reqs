@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .pill { padding:2px 8px; border-radius:10px; font-size:12px; display:inline-block; margin:2px; }
+    .pill-location { background:#e8e0f0; color:#6639a6; }
+    .pill-neutral { background:#f0f0f0; color:#424245; }
+    .pill-good { background:#dafbe1; color:#1a7f37; }
+    .pill-caution { background:#fff8c5; color:#9a6700; }
+    .pill-info { background:#ddf4ff; color:#0969da; }
+    .pill-bad { background:#ffebe9; color:#cf222e; }
+    .badge-good { background:#dafbe1; color:#1a7f37; }
+    .badge-caution { background:#fff8c5; color:#9a6700; }
+    .badge-bad { background:#ffebe9; color:#cf222e; }
+    .accent-green { color:#1a7f37; }
+    .accent-blue { color:#0969da; }
+    .accent-gray { color:#656d76; }
+    .profile-label { color:#656d76; font-size:12px; font-weight:600; margin-bottom:4px; }
+    .muted { color:#656d76; }
+    .body-text { color:#1d1d1f; }
+    .job-link { color:#0969da; }
+    .card { border:1px solid #d0d7de; }
+    .referral-notes-border { border-top:1px solid #d0d7de; }
+    .cta-box { background:#ddf4ff; border:1px solid #54aeff; }
+    .cta-title { color:#0969da; }
+    .cta-text { color:#1d1d1f; }
+    .cta-link { color:#0969da; }
+    .jobs-panel { background:#ffffff; border:1px solid #d0d7de; }
+    .profile-panel { background:#f6f8fa; border:1px solid #d0d7de; }
+    .email-body { background:#f6f8fa; }
+    @media (prefers-color-scheme: dark) {
+      .pill-location { background:#3b2d5e; color:#c4a8e8; }
+      .pill-neutral { background:#3a3a3c; color:#d1d1d6; }
+      .pill-good { background:#1a3d2a; color:#7ee8a2; }
+      .pill-caution { background:#3d3520; color:#e8c84a; }
+      .pill-info { background:#1a2d40; color:#6cb6ff; }
+      .pill-bad { background:#3d1a1a; color:#f08080; }
+      .badge-good { background:#1a3d2a; color:#7ee8a2; }
+      .badge-caution { background:#3d3520; color:#e8c84a; }
+      .badge-bad { background:#3d1a1a; color:#f08080; }
+      .accent-green { color:#3fb950; }
+      .accent-blue { color:#6cb6ff; }
+      .accent-gray { color:#a1a1a6; }
+      .profile-label { color:#a1a1a6; }
+      .muted { color:#a1a1a6; }
+      .body-text { color:#e5e5e7; }
+      .job-link { color:#6cb6ff; }
+      .card { border-color:#48484a; }
+      .referral-notes-border { border-color:#48484a; }
+      .cta-box { background:#1a2d40; border-color:#2d5a8a; }
+      .cta-title { color:#6cb6ff; }
+      .cta-text { color:#e5e5e7; }
+      .cta-link { color:#6cb6ff; }
+      .jobs-panel { background:#1c1c1e; border-color:#48484a; }
+      .profile-panel { background:#1c1c1e; border-color:#48484a; }
+      .email-body { background:#000000; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;" class="email-body">
+  <div style="max-width:600px;margin:0 auto;padding:16px;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1d1d1f 0%,#424245 100%);border-radius:12px;padding:20px;margin-bottom:4px;">
+      <h1 style="margin:0 0 4px 0;color:#ffffff;font-size:20px;font-weight:600;">
+        Job Matches for Brooke Ryan
+      </h1>
+      <p style="margin:0;color:#a1a1a6;font-size:13px;">March 23, 2026</p>
+      
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;">
+          <div style="color:#ffffff;font-size:18px;font-weight:bold;">0</div>
+          <div style="color:#a1a1a6;font-size:11px;">Today</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;">
+          <div style="color:#ffffff;font-size:18px;font-weight:bold;">0</div>
+          <div style="color:#a1a1a6;font-size:11px;">This Week</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;">
+          <div style="color:#ffffff;font-size:18px;font-weight:bold;">5</div>
+          <div style="color:#a1a1a6;font-size:11px;">Total</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Profile -->
+    <details style="margin-bottom:12px;cursor:pointer;">
+      <summary style="list-style:none;text-align:center;padding:2px 0;" class="muted">
+        <span style="font-size:11px;">View candidate profile for Brooke Ryan &#9660;</span>
+      </summary>
+      <div class="profile-panel" style="border-radius:12px;padding:16px;margin-top:6px;">
+        <h4 style="margin:0 0 10px 0;font-size:14px;" class="body-text">Candidate Profile: Brooke Ryan</h4>
+        
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">LOCATIONS</div>
+        <span class="pill pill-location">Santa Clara Valley / Cupertino</span> <span class="pill pill-location">Sunnyvale</span> <span class="pill pill-location">Campbell / San Jose</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">SEARCH QUERIES</div>
+        <span class="pill pill-neutral">software engineer</span> <span class="pill pill-neutral">senior software engineer</span> <span class="pill pill-neutral">engineering manager</span> <span class="pill pill-neutral">site reliability engineer</span> <span class="pill pill-neutral">platform engineer</span> <span class="pill pill-neutral">infrastructure software engineer</span> <span class="pill pill-neutral">cloud infrastructure engineer</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">FILTERS</div>
+        <span class="pill pill-neutral">min score: 50</span> <span class="pill pill-neutral">pages per query: 10</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">STRONG FIT (confirmed skills)</div>
+        <span class="pill pill-good">C</span> <span class="pill pill-good">Objective-C</span> <span class="pill pill-good">Swift</span> <span class="pill pill-good">CoreOS</span> <span class="pill pill-good">iCloud</span> <span class="pill pill-good">CloudKit</span> <span class="pill pill-good">networking</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">MODERATE FIT (coursework &amp; resume)</div>
+        <span class="pill pill-caution">distributed systems</span> <span class="pill pill-caution">software update</span> <span class="pill pill-caution">asset routing</span> <span class="pill pill-caution">telemetry</span> <span class="pill pill-caution">infrastructure</span> <span class="pill pill-caution">server</span> <span class="pill pill-caution">client</span> <span class="pill pill-caution">operating systems</span> <span class="pill pill-caution">Kubernetes</span> <span class="pill pill-caution">Linux</span> <span class="pill pill-caution">automation</span>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div class="profile-label">LIGHT BOOST (adjacent interest)</div>
+        <span class="pill pill-info">machine learning</span> <span class="pill pill-info">AI</span> <span class="pill pill-info">performance</span> <span class="pill pill-info">diagnostics</span> <span class="pill pill-info">mobile</span> <span class="pill pill-info">protocols</span> <span class="pill pill-info">reliability</span>
+      </div>
+      <div>
+        <div class="profile-label">FILTERED OUT (penalties applied)</div>
+        <span class="pill pill-bad">intern</span> <span class="pill pill-bad">internship</span> <span class="pill pill-bad">entry level</span> <span class="pill pill-bad">new grad</span> <span class="pill pill-bad">junior</span> <span class="pill pill-bad">retail</span> <span class="pill pill-bad">store leader</span> <span class="pill pill-bad">phd</span> <span class="pill pill-bad">photolithography</span> <span class="pill pill-bad">laser</span> <span class="pill pill-bad">data analyst</span> <span class="pill pill-bad">product manager</span> <span class="pill pill-bad">program manager</span> <span class="pill pill-bad">hardware</span> <span class="pill pill-bad">firmware</span> <span class="pill pill-bad">electrical</span> <span class="pill pill-bad">mechanical</span> <span class="pill pill-bad">RF</span> <span class="pill pill-bad">IC design</span> <span class="pill pill-bad">semiconductor</span> <span class="pill pill-bad">physical design</span> <span class="pill pill-bad">SoC</span> <span class="pill pill-bad">analog</span> <span class="pill pill-bad">prototyping</span> <span class="pill pill-bad">CNC</span> <span class="pill pill-bad">design verification</span> <span class="pill pill-bad">process engineer</span>
+      </div>
+        <div style="margin-top:14px;padding-top:12px;" class="referral-notes-border">
+              <div class="profile-label" style="margin-bottom:6px;">REFERRAL NOTES</div>
+              <p style="margin:0;font-size:13px;line-height:1.5;" class="body-text">UCSD CS alumna. 13 years at Apple spanning iCloud Server, iCloud Client, Engineering Management, and CoreOS. Experienced in systems programming (C, Obj-C, Swift, Java), networking, and cloud infrastructure.</p>
+            </div>
+        <p style="margin:10px 0 0 0;font-size:11px;font-style:italic;" class="muted">This profile was generated collaboratively with AI powered by Claude.</p>
+      </div>
+    </details>
+
+    
+
+    <!-- Job Sections -->
+    <div class="jobs-panel" style="border-radius:12px;padding:16px;">
+      
+<div style="margin-bottom:24px;">
+  <h2 style="margin:0 0 4px 0;font-size:17px;" class="accent-gray">All Open Positions</h2>
+  <p style="margin:0 0 10px 0;font-size:13px;" class="muted">Older listings still worth a look</p>
+  <div class="card" style="border-radius:8px;padding:12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <div style="min-width:36px;text-align:center;">
+      <span style="font-weight:bold;font-size:18px;color:#1a7f37;">87</span>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <a href="https://jobs.apple.com/en-us/details/200591234/software-engineer-icloud-cloudkit" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">Software Engineer, iCloud CloudKit</a> <span class="badge-caution" style="padding:2px 6px;border-radius:4px;font-size:11px;">mid-level</span>
+      <div class="muted" style="font-size:13px;margin-top:2px;">200591234 &middot; iCloud</div>
+      <div class="muted" style="font-size:13px;margin-top:2px;">Santa Clara Valley, California, United States &middot; 2026-03-23T20:39:34Z</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">CloudKit, distributed systems, Swift</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-radius:8px;padding:12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <div style="min-width:36px;text-align:center;">
+      <span style="font-weight:bold;font-size:18px;color:#1a7f37;">74</span>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <a href="https://jobs.apple.com/en-us/details/200591235/platform-infrastructure-engineer" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">Platform Infrastructure Engineer</a> <span class="badge-good" style="padding:2px 6px;border-radius:4px;font-size:11px;">senior</span>
+      <div class="muted" style="font-size:13px;margin-top:2px;">200591235 &middot; Core OS</div>
+      <div class="muted" style="font-size:13px;margin-top:2px;">Sunnyvale, California, United States &middot; 2026-03-23T20:39:34Z</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Kubernetes, Linux, infrastructure</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-radius:8px;padding:12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <div style="min-width:36px;text-align:center;">
+      <span style="font-weight:bold;font-size:18px;color:#9a6700;">68</span>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <a href="https://jobs.apple.com/en-us/details/200589001/site-reliability-engineer-core-services" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">Site Reliability Engineer, Core Services</a> <span class="badge-caution" style="padding:2px 6px;border-radius:4px;font-size:11px;">mid-level</span>
+      <div class="muted" style="font-size:13px;margin-top:2px;">200589001 &middot; Apple Services Engineering</div>
+      <div class="muted" style="font-size:13px;margin-top:2px;">San Jose, California, United States &middot; 2026-03-20T20:39:34Z</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">networking, reliability, automation</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-radius:8px;padding:12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <div style="min-width:36px;text-align:center;">
+      <span style="font-weight:bold;font-size:18px;color:#9a6700;">55</span>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <a href="https://jobs.apple.com/en-us/details/200589002/engineering-manager-server-infrastructure" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">Engineering Manager, Server Infrastructure</a> <span class="badge-good" style="padding:2px 6px;border-radius:4px;font-size:11px;">senior</span>
+      <div class="muted" style="font-size:13px;margin-top:2px;">200589002 &middot; iCloud Server</div>
+      <div class="muted" style="font-size:13px;margin-top:2px;">Santa Clara Valley, California, United States &middot; 2026-03-20T20:39:34Z</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">server, infrastructure</div>
+    </div>
+  </div>
+</div>
+<div class="card" style="border-radius:8px;padding:12px;margin-bottom:10px;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <div style="min-width:36px;text-align:center;">
+      <span style="font-weight:bold;font-size:18px;color:#9a6700;">62</span>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <a href="https://jobs.apple.com/en-us/details/200580099/cloud-infrastructure-software-engineer" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">Cloud Infrastructure Software Engineer</a> <span class="badge-caution" style="padding:2px 6px;border-radius:4px;font-size:11px;">mid-level</span>
+      <div class="muted" style="font-size:13px;margin-top:2px;">200580099 &middot; Apple Cloud Services</div>
+      <div class="muted" style="font-size:13px;margin-top:2px;">Santa Clara Valley, California, United States &middot; 2026-03-09T20:39:34Z</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">iCloud, networking, C</div>
+    </div>
+  </div>
+</div>
+  
+</div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px 0;font-size:12px;">
+      <p style="margin:0;font-size:11px;" class="muted">
+        Reply to this email to stop receiving these messages or to request changes to your profile.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
