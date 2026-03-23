@@ -27,6 +27,10 @@ def _load_page(page: Page, server_url: str):
 def _load_profile(page: Page, server_url: str, filename: str = "test_user_profile.yaml"):
     """Navigate, wait for init, then load a specific profile."""
     _load_page(page, server_url)
+    # Clear the name field so the wait below correctly blocks until the async
+    # loadProfile() fetch completes (otherwise it fires immediately if a
+    # different profile was auto-loaded during init()).
+    page.evaluate("document.getElementById('f-name').value = ''")
     page.select_option("#profile-select", filename)
     # Wait for profile to load by checking the name field gets populated
     page.wait_for_function(
