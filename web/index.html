@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Open Reqs</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+      background: #0d0d0f;
+      color: #e8e8e8;
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      flex-direction: column;
+    }
+
+    input, button, select, textarea { font-family: inherit; }
+    input:focus, button:focus, select:focus, textarea:focus { outline: none; }
+    a { color: #a8d8ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+      background: #0d0d0f;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: #fff; }
+    .topbar-sub { font-size: 11px; color: #444; margin-top: 2px; }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 290px;
+      flex-shrink: 0;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto;
+      padding: 14px 14px 24px;
+    }
+
+    .sec-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 14px 0 6px;
+    }
+    .sec-label:first-child { margin-top: 0; }
+
+    .group-label {
+      font-size: 10px;
+      color: #444;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    select.profile-select {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e8e8e8;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .field {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #e8e8e8;
+      font-size: 12px;
+    }
+    .field:focus { border-color: rgba(168,216,255,0.35); }
+
+    textarea.field {
+      resize: vertical;
+      min-height: 72px;
+      line-height: 1.5;
+    }
+
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 14px 0; }
+
+    /* Location chips */
+    .chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #888;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .chip:hover { border-color: rgba(255,255,255,0.2); color: #aaa; }
+    .chip.active {
+      background: rgba(168,216,255,0.14);
+      border-color: rgba(168,216,255,0.4);
+      color: #a8d8ff;
+    }
+
+    /* Tag group */
+    .tag-group {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 7px 8px;
+      min-height: 38px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      cursor: text;
+    }
+    .tag-group:focus-within { border-color: rgba(168,216,255,0.3); }
+
+    .tag-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .tag-item .tag-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .tag-item .x {
+      cursor: pointer;
+      opacity: 0.55;
+      font-size: 13px;
+      line-height: 1;
+      margin-left: 1px;
+    }
+    .tag-item .x:hover { opacity: 1; }
+
+    .tag-add {
+      background: none;
+      border: none;
+      color: #e8e8e8;
+      font-size: 11px;
+      flex: 1;
+      min-width: 90px;
+    }
+
+    /* Tag colors */
+    .tg-neutral  { background: rgba(58,58,60,.8);   color: #d1d1d6; }
+    .tg-strong   { background: rgba(30,80,50,.65);  color: #7ee8a2; }
+    .tg-moderate { background: rgba(61,53,32,.8);   color: #e8c84a; }
+    .tg-light    { background: rgba(26,45,64,.8);   color: #6cb6ff; }
+    .tg-hard     { background: rgba(61,26,26,.85);  color: #f08080; }
+    .tg-soft     { background: rgba(61,26,26,.5);   color: #e8a0a0; }
+
+    /* Settings row */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #888;
+    }
+    .settings-row input { width: 64px; }
+
+    /* Revert button */
+    .revert-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #555;
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .revert-btn:disabled { opacity: 0.3; cursor: default; }
+    .revert-btn:not(:disabled):hover {
+      background: rgba(240,128,128,0.08);
+      border-color: rgba(240,128,128,0.3);
+      color: #f08080;
+    }
+
+    /* Save button */
+    .save-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #888;
+      border-radius: 7px;
+      padding: 5px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .save-btn:disabled { opacity: 0.3; cursor: default; }
+    .save-btn.dirty {
+      background: rgba(232,200,74,0.12);
+      border-color: rgba(232,200,74,0.35);
+      color: #e8c84a;
+    }
+    .save-btn.dirty:hover { background: rgba(232,200,74,0.2); }
+    .save-btn.saved {
+      background: rgba(30,80,50,0.4);
+      border-color: rgba(126,232,162,0.4);
+      color: #7ee8a2;
+    }
+
+    /* New profile button */
+    .new-profile-btn {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #555;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .new-profile-btn:hover {
+      border-color: rgba(168,216,255,0.3);
+      color: #a8d8ff;
+    }
+
+    /* Auth status */
+    .auth-status {
+      font-size: 10px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .auth-status.ok { color: #7ee8a2; }
+
+    /* Per-field dirty indicator */
+    .fdot {
+      display: none;
+      width: 5px;
+      height: 5px;
+      background: #e8c84a;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-left: 4px;
+      opacity: 0.9;
+    }
+
+    /* AI enhance button */
+    .ai-btn {
+      width: 100%;
+      background: rgba(126,232,162,0.12);
+      border: 1px solid rgba(126,232,162,0.25);
+      color: #7ee8a2;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .ai-btn:disabled { opacity: 0.35; cursor: default; }
+    .ai-btn:not(:disabled):hover { background: rgba(126,232,162,0.22); }
+
+    /* Staged changes panel */
+    .staged-panel {
+      background: rgba(20,35,50,0.7);
+      border: 1px solid rgba(168,216,255,0.18);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .staged-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .staged-hdr-label {
+      font-size: 10px;
+      color: #6cb6ff;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .staged-close {
+      background: none;
+      border: none;
+      color: #444;
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+    }
+    .staged-close:hover { color: #888; }
+    .staged-explain {
+      font-size: 11px;
+      color: #a8e6bb;
+      line-height: 1.55;
+      margin-bottom: 9px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .diff-group { margin-bottom: 6px; }
+    .diff-group-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 3px;
+    }
+    .diff-add { color: #7ee8a2; font-size: 11px; }
+    .diff-rm  { color: #f08080; font-size: 11px; }
+    .diff-scalar { color: #a8d8ff; font-size: 11px; }
+    .diff-none { color: #3a3a3c; font-size: 11px; font-style: italic; }
+    .staged-actions { display: flex; gap: 6px; margin-top: 9px; }
+    .apply-btn {
+      flex: 1;
+      background: rgba(126,232,162,0.15);
+      border: 1px solid rgba(126,232,162,0.3);
+      color: #7ee8a2;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .apply-btn:hover { background: rgba(126,232,162,0.25); }
+    .discard-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: #555;
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .discard-btn:hover { color: #999; border-color: rgba(255,255,255,0.18); }
+
+    /* AI explanation banner */
+    .ai-banner {
+      background: rgba(30,60,45,0.55);
+      border: 1px solid rgba(126,232,162,0.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #a8e6bb;
+      line-height: 1.6;
+    }
+    .ai-banner-label {
+      font-size: 10px;
+      color: #7ee8a2;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 5px;
+    }
+
+    /* Stale results banner */
+    .stale-banner {
+      background: rgba(232,200,74,0.07);
+      border: 1px solid rgba(232,200,74,0.18);
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #a89040;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stale-banner a {
+      color: #e8c84a;
+      cursor: pointer;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+
+    /* Run button */
+    .run-btn {
+      background: rgba(168,216,255,0.18);
+      border: 1px solid rgba(168,216,255,0.3);
+      color: #a8d8ff;
+      border-radius: 8px;
+      padding: 9px 22px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .run-btn:disabled { opacity: 0.35; cursor: default; }
+    .run-btn:not(:disabled):hover { background: rgba(168,216,255,0.28); }
+
+    /* ── Results panel ── */
+    .results-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 40px;
+    }
+
+    .placeholder {
+      text-align: center;
+      padding: 80px 0;
+      color: #333;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .spinner {
+      text-align: center;
+      padding: 60px 0;
+      color: #555;
+      font-size: 13px;
+    }
+
+    .error-box {
+      background: rgba(255,100,100,0.08);
+      border: 1px solid rgba(255,100,100,0.2);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #ff8888;
+      font-size: 13px;
+    }
+
+    /* ── Result header ── */
+    .result-header {
+      background: linear-gradient(135deg, #1d1d1f 0%, #424245 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .result-header h2 { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+    .rh-date { color: #a1a1a6; font-size: 13px; }
+    .rh-byline { color: #a1a1a6; font-size: 12px; margin-top: 4px; }
+    .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .stat-box {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      text-align: center;
+      min-width: 60px;
+    }
+    .stat-n { color: #fff; font-size: 20px; font-weight: bold; }
+    .stat-l { color: #a1a1a6; font-size: 11px; }
+
+    /* ── Profile summary ── */
+    details.prof-summary { margin-bottom: 10px; }
+    details.prof-summary summary {
+      list-style: none;
+      text-align: center;
+      padding: 4px 0;
+      color: #555;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .prof-panel {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 6px;
+    }
+    .prof-panel h4 { font-size: 13px; color: #ccc; margin-bottom: 10px; }
+    .prof-row { margin-bottom: 9px; }
+    .prof-row-label {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; display: inline-block; }
+    .pill-loc    { background: #3b2d5e; color: #c4a8e8; }
+    .pill-neu    { background: #3a3a3c; color: #d1d1d6; }
+    .pill-good   { background: #1a3d2a; color: #7ee8a2; }
+    .pill-cau    { background: #3d3520; color: #e8c84a; }
+    .pill-info   { background: #1a2d40; color: #6cb6ff; }
+    .pill-bad    { background: #3d1a1a; color: #f08080; }
+    .ref-notes { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .ref-notes p { font-size: 13px; color: #bbb; line-height: 1.5; margin-top: 5px; }
+    .prof-note { font-size: 11px; color: #3a3a3c; font-style: italic; margin-top: 10px; }
+
+    /* ── CTA ── */
+    .cta-box {
+      background: rgba(26,45,64,0.75);
+      border: 1px solid rgba(45,90,138,0.5);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .cta-title { font-size: 14px; font-weight: 600; color: #6cb6ff; margin-bottom: 6px; }
+    .cta-text { font-size: 13px; color: #ccc; line-height: 1.5; }
+    .cta-text a { color: #6cb6ff; }
+
+    /* ── Job sections ── */
+    .job-section { margin-bottom: 28px; }
+    .js-title { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
+    .js-sub { font-size: 13px; color: #555; margin-bottom: 12px; }
+    .js-today { color: #3fb950; }
+    .js-week  { color: #6cb6ff; }
+    .js-older { color: #a1a1a6; }
+
+    /* ── Job card ── */
+    .job-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 9px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: border-color 0.15s;
+    }
+    .job-card:hover { border-color: rgba(255,255,255,0.18); }
+    .job-score {
+      min-width: 34px;
+      text-align: center;
+      font-size: 19px;
+      font-weight: bold;
+      padding-top: 1px;
+    }
+    .score-g { color: #3fb950; }
+    .score-a { color: #e8c84a; }
+    .score-r { color: #f08080; }
+    .job-body { flex: 1; min-width: 0; }
+    .job-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .job-title-link {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a8d8ff;
+      word-wrap: break-word;
+    }
+    .job-title-link:hover { text-decoration: underline; }
+    .exp-badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+    .bg-good { background: #1a3d2a; color: #7ee8a2; }
+    .bg-bad  { background: #3d1a1a; color: #f08080; }
+    .bg-neu  { background: #3a3a3c; color: #d1d1d6; }
+    .job-meta { font-size: 12px; color: #555; margin-top: 3px; }
+    .job-reasons { font-size: 11px; color: #444; margin-top: 3px; }
+    .trunc-note { font-size: 12px; color: #444; font-style: italic; margin-top: 8px; }
+
+    .no-results { text-align: center; padding: 40px 0; color: #333; font-size: 13px; }
+
+    /* ── Git status bar ── */
+    .git-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .git-ok   { color: #444; }
+    .git-warn { color: #e8c84a; }
+    .git-info { color: #6cb6ff; }
+    .deploy-btn {
+      background: rgba(232,200,74,0.1);
+      border: 1px solid rgba(232,200,74,0.25);
+      color: #e8c84a;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s;
+    }
+    .deploy-btn:disabled { opacity: 0.4; cursor: default; }
+    .deploy-btn:not(:disabled):hover { background: rgba(232,200,74,0.2); }
+
+    /* ── Resume / generate form ── */
+    .resume-drop {
+      display: block;
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 11px;
+      color: #444;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 5px;
+    }
+    .resume-drop:hover { border-color: rgba(168,216,255,0.3); color: #a8d8ff; }
+    .resume-drop.drag-over { border-color: rgba(168,216,255,0.5); background: rgba(168,216,255,0.05); }
+
+    /* ── Schedule section ── */
+    .schedule-hint {
+      font-size: 10px;
+      color: #3a3a3c;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .schedule-save-btn {
+      background: rgba(108,182,255,0.1);
+      border: 1px solid rgba(108,182,255,0.2);
+      color: #6cb6ff;
+      border-radius: 7px;
+      padding: 5px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .schedule-save-btn:disabled { opacity: 0.3; cursor: default; }
+    .schedule-save-btn:not(:disabled):hover { background: rgba(108,182,255,0.2); }
+
+    /* ── Progress indicator ── */
+    .progress-wrap {
+      padding: 80px 48px;
+      text-align: center;
+    }
+    .progress-name {
+      font-size: 14px;
+      color: #bbb;
+      margin-bottom: 28px;
+    }
+    .progress-track {
+      background: rgba(255,255,255,0.06);
+      border-radius: 8px;
+      height: 5px;
+      max-width: 420px;
+      margin: 0 auto 28px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a8d8ff 0%, #7ee8a2 100%);
+      border-radius: 8px;
+      width: 0%;
+      transition: width 0.6s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Open Reqs</div>
+      <div class="topbar-sub">Candidate profile search with scored results</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="git-bar" id="git-bar"></div>
+      <button class="run-btn" id="run-btn">Run Search →</button>
+    </div>
+  </div>
+
+  <!-- Two-column layout -->
+  <div class="layout">
+
+    <!-- Sidebar: profile editor -->
+    <div class="sidebar">
+
+      <div class="sec-label">Load Profile</div>
+      <select class="profile-select" id="profile-select">
+        <option value="">— select a profile —</option>
+      </select>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:7px;">
+        <button class="save-btn" id="save-btn" disabled>Save</button>
+        <button class="revert-btn" id="revert-btn" disabled>Revert</button>
+        <button class="new-profile-btn" id="new-profile-btn">+ New</button>
+        <span id="dirty-dot" style="display:none;font-size:11px;color:#e8c84a;">● unsaved changes</span>
+      </div>
+      <div id="new-profile-row" style="display:none;margin-top:8px;">
+        <!-- Resume input for Claude-powered generation -->
+        <div class="group-label" style="margin-bottom:4px;">Resume</div>
+        <textarea class="field" id="new-profile-resume"
+          placeholder="Paste resume text here…"
+          style="min-height:72px;margin-bottom:5px;font-size:11px;"></textarea>
+        <input type="file" id="new-profile-file" accept=".pdf,.txt" style="display:none" />
+        <label id="new-profile-drop" class="resume-drop">
+          Browse or drop a PDF / .txt file
+        </label>
+        <div id="new-profile-file-status" style="font-size:10px;margin-bottom:4px;display:none;"></div>
+        <div id="new-profile-identity" style="font-size:10px;color:#7ee8a2;margin-bottom:5px;display:none;"></div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="save-btn dirty" id="new-profile-generate">Generate with Claude →</button>
+          <button class="revert-btn" id="new-profile-blank">Create blank</button>
+          <button class="revert-btn" id="new-profile-cancel">Cancel</button>
+        </div>
+        <div id="new-profile-gen-status" style="font-size:10px;color:#555;margin-top:5px;display:none;"></div>
+      </div>
+
+      <div id="profile-content">
+
+      <div class="divider"></div>
+
+      <div class="sec-label">AI Enhanced Search <span style="color:#3a3a3c;font-size:10px;">claude</span></div>
+      <div class="auth-status" id="auth-status"></div>
+      <textarea class="field" id="f-ai-message" placeholder="Optional: tell Claude what to improve&#10;e.g. too many senior roles, focus more on data..." style="min-height:60px;margin-bottom:8px;"></textarea>
+
+      <!-- Staged changes panel (hidden until AI returns a proposal) -->
+      <div class="staged-panel" id="staged-panel" style="display:none">
+        <div class="staged-hdr">
+          <span class="staged-hdr-label">Proposed Changes</span>
+          <button class="staged-close" id="staged-close" title="Dismiss">✕</button>
+        </div>
+        <div class="staged-explain" id="staged-explain"></div>
+        <div id="staged-diff"></div>
+        <div class="staged-actions">
+          <button class="apply-btn" id="apply-btn">Apply</button>
+          <button class="discard-btn" id="discard-btn">Discard</button>
+        </div>
+      </div>
+
+      <button class="ai-btn" id="ai-btn">Enhance</button>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Candidate Name <span class="fdot" id="fdot-name"></span></div>
+      <input class="field" id="f-name" type="text" placeholder="Full name..." />
+
+      <div class="sec-label" style="margin-top:14px;">Locations <span class="fdot" id="fdot-loc"></span></div>
+      <div class="chip-row" id="loc-chips"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Search Queries <span class="fdot" id="fdot-queries"></span></div>
+      <div class="tag-group" id="tg-queries"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Boost Keywords <span class="fdot" id="fdot-boost"></span></div>
+      <div class="group-label">Strong — confirmed skills</div>
+      <div class="tag-group" id="tg-boost-strong"></div>
+      <div class="group-label">Moderate — coursework &amp; resume</div>
+      <div class="tag-group" id="tg-boost-moderate"></div>
+      <div class="group-label">Light — adjacent interest</div>
+      <div class="tag-group" id="tg-boost-light"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Penalty Keywords <span class="fdot" id="fdot-penalty"></span></div>
+      <div class="group-label">Hard — disqualifiers</div>
+      <div class="tag-group" id="tg-penalty-hard"></div>
+      <div class="group-label">Soft — mild penalties</div>
+      <div class="tag-group" id="tg-penalty-soft"></div>
+
+      <div class="sec-label" style="margin-top:14px;">Settings <span class="fdot" id="fdot-settings"></span></div>
+      <div class="settings-row">
+        <span>Pages per query:</span>
+        <input class="field" id="f-pages" type="number" min="1" max="50" value="3" />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Referrer <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-referrer"></span></div>
+      <input class="field" id="f-ref-name" type="text" placeholder="Referrer name..." style="margin-bottom:7px;" />
+      <input class="field" id="f-ref-phone" type="text" placeholder="+1 (408) 555-0100" />
+
+      <div class="sec-label" style="margin-top:14px;">Referral Notes <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-notes"></span></div>
+      <textarea class="field" id="f-notes" placeholder="Notes included in the email digest..."></textarea>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Email &amp; Notifications <span style="color:#3a3a3c;font-size:10px;">optional</span> <span class="fdot" id="fdot-email"></span></div>
+      <div class="group-label">Candidate email</div>
+      <input class="field" id="f-email" type="email" placeholder="candidate@example.com" style="margin-bottom:7px;" />
+      <div class="group-label">Referrer email</div>
+      <input class="field" id="f-ref-email" type="email" placeholder="referrer@example.com" />
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Schedule <span style="color:#3a3a3c;font-size:10px;">github actions</span></div>
+      <div id="schedule-no-workflow" style="font-size:10px;color:#3a3a3c;margin-bottom:6px;">
+        No workflow file found for this profile.
+        Save a schedule to create one.
+      </div>
+      <div class="group-label">Cron expression
+        <a href="https://crontab.guru" target="_blank" rel="noopener noreferrer"
+           style="color:#3a3a3c;font-size:10px;margin-left:4px;">↗ crontab.guru</a>
+      </div>
+      <input class="field" id="f-cron" type="text" placeholder="37 20 * * *"
+             style="margin-bottom:5px;font-family:monospace;" />
+      <div class="schedule-hint" id="cron-hint"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <button class="schedule-save-btn" id="schedule-save-btn">Save Schedule</button>
+        <span id="schedule-status" style="font-size:10px;display:none;"></span>
+      </div>
+      <div class="schedule-hint" style="margin-top:6px;">Schedule changes must be deployed to take effect.</div>
+
+      </div> <!-- #profile-content -->
+
+    </div>
+
+    <!-- Results panel -->
+    <div class="results-panel" id="results-panel">
+      <div id="stale-bar" style="display:none">
+        <div class="stale-banner">
+          Profile has changed since the last search — results may be out of date.
+          <a onclick="runSearch()">Run Search</a>
+        </div>
+      </div>
+      <div id="results-content">
+        <div class="placeholder">
+          Configure a candidate profile and click<br>
+          <strong style="color:#a8d8ff;cursor:pointer;" onclick="runSearch()">Run Search →</strong><br>
+          to see scored results.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    let currentFile = null;          // filename of the loaded profile
+    let loadedRawData = null;        // full original data (preserves email, base_url, etc.)
+    let dirty = false;
+    let lastSearchedProfile = null;  // snapshot of profile at time of last search
+
+    const saveBtn   = document.getElementById('save-btn');
+    const revertBtn = document.getElementById('revert-btn');
+    const dirtyDot  = document.getElementById('dirty-dot');
+
+    // ── Per-field dirty tracking ──────────────────────────────────────────────
+    function computeDirtyFields() {
+      if (!loadedRawData) return new Set();
+      const d = new Set();
+      const arrEq = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+
+      if ((profile.name || '') !== (loadedRawData.name || '')) d.add('name');
+      if (!arrEq(profile.locations, loadedRawData.locations)) d.add('loc');
+
+      if (!arrEq(profile.queries, loadedRawData.queries)) d.add('queries');
+
+      const b = profile.boost_keywords || {}, lb = loadedRawData.boost_keywords || {};
+      if (!arrEq(b.strong, lb.strong) || !arrEq(b.moderate, lb.moderate) ||
+          !arrEq(b.light, lb.light)) d.add('boost');
+
+      const p = profile.penalty_keywords || {}, lp = loadedRawData.penalty_keywords || {};
+      if (!arrEq(p.hard, lp.hard) || !arrEq(p.soft, lp.soft)) d.add('penalty');
+
+      if ((profile.pages_per_query || 3) !== (loadedRawData.pages_per_query || 3)) d.add('settings');
+
+      if ((profile.email || '') !== (loadedRawData.email || '') ||
+          (profile.referrer_email || '') !== (loadedRawData.referrer_email || '')) d.add('email');
+
+      if ((profile.referrer_name || '') !== (loadedRawData.referrer_name || '') ||
+          (profile.referrer_phone || '') !== (loadedRawData.referrer_phone || '')) d.add('referrer');
+
+      if ((profile.referral_notes || '') !== (loadedRawData.referral_notes || '')) d.add('notes');
+
+      return d;
+    }
+
+    function refreshDirtyDots() {
+      const d = computeDirtyFields();
+      ['name','loc','queries','boost','penalty','settings','email','referrer','notes'].forEach(k => {
+        const el = document.getElementById('fdot-' + k);
+        if (el) el.style.display = d.has(k) ? 'inline-block' : 'none';
+      });
+    }
+
+    // ── Staleness (results don't reflect current search-relevant fields) ──────
+    function isStale() {
+      if (!lastSearchedProfile) return true;
+      const eq = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+      return !eq(profile.locations,        lastSearchedProfile.locations)
+          || !eq(profile.queries,          lastSearchedProfile.queries)
+          || !eq(profile.boost_keywords,   lastSearchedProfile.boost_keywords)
+          || !eq(profile.penalty_keywords, lastSearchedProfile.penalty_keywords)
+          || (profile.pages_per_query || 3) !== (lastSearchedProfile.pages_per_query || 3);
+    }
+
+    function refreshStaleBanner() {
+      document.getElementById('stale-bar').style.display =
+        (lastSearchedProfile && isStale()) ? '' : 'none';
+    }
+
+    function updateRunBtn() {
+      const stale = isStale();
+      runBtn.disabled = !stale;
+      refreshStaleBanner();
+    }
+
+    function markDirty() {
+      if (!currentFile) return;
+      dirty = true;
+      saveBtn.disabled = false;
+      saveBtn.className = 'save-btn dirty';
+      saveBtn.textContent = 'Save';
+      revertBtn.disabled = false;
+      dirtyDot.style.display = '';
+      refreshDirtyDots();
+      updateRunBtn();
+    }
+
+    function markClean() {
+      dirty = false;
+      saveBtn.disabled = true;
+      saveBtn.className = 'save-btn';
+      revertBtn.disabled = true;
+      dirtyDot.style.display = 'none';
+      refreshDirtyDots();
+      // Re-render tag groups so bold/strikethrough indicators clear
+      Object.keys(tagGroups).forEach(renderTagGroup);
+      updateRunBtn();
+    }
+
+    let profile = {
+      name: '',
+      email: '',
+      locations: [],
+      queries: [],
+      boost_keywords: { strong: [], moderate: [], light: [] },
+      penalty_keywords: { hard: [], soft: [] },
+      pages_per_query: 3,
+      referrer_name: '',
+      referrer_phone: '',
+      referrer_email: '',
+      referral_notes: '',
+    };
+
+    let availableLocations = {};  // { code: label }
+
+    // ── Tag group component ───────────────────────────────────────────────────
+    const tagGroups = {};
+
+    function setupTagGroup(id, getArr, setArr, style, getSaved) {
+      const el = document.getElementById(id);
+      tagGroups[id] = { el, getArr, setArr, style, getSaved: getSaved || (() => null) };
+      el.addEventListener('click', () => {
+        const inp = el.querySelector('.tag-add');
+        if (inp) inp.focus();
+      });
+      renderTagGroup(id);
+    }
+
+    function renderTagGroup(id) {
+      const { el, getArr, setArr, style, getSaved } = tagGroups[id];
+      const items = getArr();
+      const saved = getSaved();
+      el.innerHTML = '';
+
+      // Split current items: new ones (not in saved) first, then unchanged
+      const newItems      = saved !== null ? items.filter(x => !saved.includes(x)) : [];
+      const existingItems = saved !== null ? items.filter(x =>  saved.includes(x)) : items;
+
+      function makeRemovableTag(item, isNew) {
+        const span = document.createElement('span');
+        span.className = `tag-item tg-${style}`;
+        span.title = String(item);
+        if (isNew) span.style.fontWeight = '700';
+        const txt = document.createElement('span');
+        txt.className = 'tag-text';
+        txt.textContent = String(item);
+        const x = document.createElement('span');
+        x.className = 'x';
+        x.textContent = '×';
+        x.addEventListener('click', ev => {
+          ev.stopPropagation();
+          const arr = getArr();
+          const idx = arr.indexOf(item);
+          if (idx >= 0) { const a = arr.slice(); a.splice(idx, 1); setArr(a); }
+          renderTagGroup(id);
+        });
+        span.appendChild(txt);
+        span.appendChild(x);
+        return span;
+      }
+
+      newItems.forEach(item => el.appendChild(makeRemovableTag(item, true)));
+      existingItems.forEach(item => el.appendChild(makeRemovableTag(item, false)));
+
+      // Removed items: in saved but deleted — strikethrough, click to restore
+      if (saved !== null) {
+        saved.filter(x => !items.includes(x)).forEach(item => {
+          const span = document.createElement('span');
+          span.className = `tag-item tg-${style}`;
+          span.style.textDecoration = 'line-through';
+          span.style.opacity = '0.4';
+          span.title = 'Click to restore';
+          span.textContent = String(item);
+          span.addEventListener('click', ev => {
+            ev.stopPropagation();
+            setArr([...getArr(), item]);
+            renderTagGroup(id);
+          });
+          el.appendChild(span);
+        });
+      }
+
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'tag-add';
+      inp.placeholder = items.length === 0 ? 'Add...' : '';
+      inp.addEventListener('keydown', ev => {
+        if ((ev.key === 'Enter' || ev.key === ',') && inp.value.trim()) {
+          ev.preventDefault();
+          const val = inp.value.replace(/,/g, '').trim();
+          if (val) {
+            setArr([...getArr(), val]);
+            renderTagGroup(id);
+            setTimeout(() => {
+              const ni = document.getElementById(id).querySelector('.tag-add');
+              if (ni) ni.focus();
+            }, 0);
+          }
+        } else if (ev.key === 'Backspace' && !inp.value) {
+          const arr = getArr();
+          if (arr.length > 0) {
+            setArr(arr.slice(0, -1));
+            renderTagGroup(id);
+          }
+        }
+      });
+      el.appendChild(inp);
+    }
+
+    // ── Wire up tag groups ────────────────────────────────────────────────────
+    setupTagGroup('tg-queries',
+      () => profile.queries,
+      v => { profile.queries = v; markDirty(); },
+      'neutral',
+      () => loadedRawData?.queries ?? null);
+
+    setupTagGroup('tg-boost-strong',
+      () => profile.boost_keywords.strong,
+      v => { profile.boost_keywords.strong = v; markDirty(); },
+      'strong',
+      () => loadedRawData?.boost_keywords?.strong ?? null);
+
+    setupTagGroup('tg-boost-moderate',
+      () => profile.boost_keywords.moderate,
+      v => { profile.boost_keywords.moderate = v; markDirty(); },
+      'moderate',
+      () => loadedRawData?.boost_keywords?.moderate ?? null);
+
+    setupTagGroup('tg-boost-light',
+      () => profile.boost_keywords.light,
+      v => { profile.boost_keywords.light = v; markDirty(); },
+      'light',
+      () => loadedRawData?.boost_keywords?.light ?? null);
+
+    setupTagGroup('tg-penalty-hard',
+      () => profile.penalty_keywords.hard,
+      v => { profile.penalty_keywords.hard = v; markDirty(); },
+      'hard',
+      () => loadedRawData?.penalty_keywords?.hard ?? null);
+
+    setupTagGroup('tg-penalty-soft',
+      () => profile.penalty_keywords.soft,
+      v => { profile.penalty_keywords.soft = v; markDirty(); },
+      'soft',
+      () => loadedRawData?.penalty_keywords?.soft ?? null);
+
+    // ── Simple field bindings ─────────────────────────────────────────────────
+    document.getElementById('f-name').addEventListener('input', e => { profile.name = e.target.value; markDirty(); });
+    document.getElementById('f-email').addEventListener('input', e => { profile.email = e.target.value; markDirty(); });
+    document.getElementById('f-ref-email').addEventListener('input', e => { profile.referrer_email = e.target.value; markDirty(); });
+    document.getElementById('f-pages').addEventListener('input', e => { profile.pages_per_query = parseInt(e.target.value) || 3; markDirty(); });
+    document.getElementById('f-ref-name').addEventListener('input', e => { profile.referrer_name = e.target.value; markDirty(); });
+    document.getElementById('f-ref-phone').addEventListener('input', e => { profile.referrer_phone = e.target.value; markDirty(); });
+    document.getElementById('f-notes').addEventListener('input', e => { profile.referral_notes = e.target.value; markDirty(); });
+
+    // ── Location chips ────────────────────────────────────────────────────────
+    function renderLocChips() {
+      const container = document.getElementById('loc-chips');
+      container.innerHTML = '';
+      Object.entries(availableLocations).forEach(([code, label]) => {
+        const btn = document.createElement('button');
+        btn.className = 'chip' + (profile.locations.includes(code) ? ' active' : '');
+        btn.textContent = label;
+        btn.title = code;
+        btn.addEventListener('click', () => {
+          const idx = profile.locations.indexOf(code);
+          if (idx >= 0) profile.locations.splice(idx, 1);
+          else profile.locations.push(code);
+          renderLocChips();
+          markDirty();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    // ── Load profile from server ──────────────────────────────────────────────
+    function applyProfile(data) {
+      loadedRawData = data;  // preserve all fields (base_url, etc.)
+
+      profile.name             = data.name             || '';
+      profile.email            = data.email            || '';
+      profile.locations        = data.locations        || [];
+      profile.queries          = data.queries          || [];
+      profile.boost_keywords   = data.boost_keywords   || { strong: [], moderate: [], light: [] };
+      profile.penalty_keywords = data.penalty_keywords || { hard: [], soft: [] };
+      profile.pages_per_query  = data.pages_per_query  || 3;
+      profile.referrer_name    = data.referrer_name    || '';
+      profile.referrer_phone   = data.referrer_phone   || '';
+      profile.referrer_email   = data.referrer_email   || '';
+      profile.referral_notes   = data.referral_notes   || '';
+
+      document.getElementById('f-name').value       = profile.name;
+      document.getElementById('f-email').value      = profile.email;
+      document.getElementById('f-ref-email').value  = profile.referrer_email;
+      document.getElementById('f-pages').value      = profile.pages_per_query;
+      document.getElementById('f-ref-name').value   = profile.referrer_name;
+      document.getElementById('f-ref-phone').value  = profile.referrer_phone;
+      document.getElementById('f-notes').value      = profile.referral_notes;
+
+      renderLocChips();
+      ['tg-queries','tg-boost-strong','tg-boost-moderate','tg-boost-light',
+       'tg-penalty-hard','tg-penalty-soft'].forEach(renderTagGroup);
+
+      markClean();
+    }
+
+    async function loadProfile(filename) {
+      try {
+        const r = await fetch(`/api/profile/${encodeURIComponent(filename)}`);
+        if (r.ok) {
+          currentFile = filename;
+          applyProfile(await r.json());
+          fetchWorkflowInfo(filename);
+        }
+      } catch (_) {}
+    }
+
+    // ── Save profile ──────────────────────────────────────────────────────────
+    async function saveProfile() {
+      if (!currentFile || !loadedRawData) return;
+
+      // Merge edited fields back into the full original data
+      const toSave = {
+        ...loadedRawData,
+        name:             profile.name,
+        email:            profile.email,
+        locations:        profile.locations,
+        queries:          profile.queries,
+        boost_keywords:   profile.boost_keywords,
+        penalty_keywords: profile.penalty_keywords,
+        pages_per_query:  profile.pages_per_query,
+        referrer_name:    profile.referrer_name,
+        referrer_phone:   profile.referrer_phone,
+        referrer_email:   profile.referrer_email,
+        referral_notes:   profile.referral_notes,
+      };
+
+      saveBtn.textContent = 'Saving…';
+      saveBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/profile/${encodeURIComponent(currentFile)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(toSave),
+        });
+        if (res.ok) {
+          loadedRawData = toSave;
+          markClean();
+          saveBtn.className = 'save-btn saved';
+          saveBtn.textContent = 'Saved ✓';
+          refreshGitStatus();
+          setTimeout(() => {
+            saveBtn.className = 'save-btn';
+            saveBtn.textContent = 'Save';
+          }, 2000);
+        } else {
+          const d = await res.json();
+          saveBtn.disabled = false;
+          saveBtn.className = 'save-btn dirty';
+          saveBtn.textContent = 'Save';
+          alert('Save failed: ' + (d.error || res.statusText));
+        }
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.className = 'save-btn dirty';
+        saveBtn.textContent = 'Save';
+        alert('Save failed: ' + err.message);
+      }
+    }
+
+    saveBtn.addEventListener('click', saveProfile);
+
+    revertBtn.addEventListener('click', () => {
+      if (!loadedRawData) return;
+      applyProfile(loadedRawData);
+    });
+
+    // ── New profile ───────────────────────────────────────────────────────────
+    let _inferredName = '', _inferredEmail = '';
+
+    function _openNewProfileForm() {
+      _inferredName = '';
+      _inferredEmail = '';
+      document.getElementById('new-profile-resume').value = '';
+      document.getElementById('new-profile-gen-status').style.display = 'none';
+      document.getElementById('new-profile-file-status').style.display = 'none';
+      document.getElementById('new-profile-identity').style.display = 'none';
+      document.getElementById('new-profile-row').style.display = '';
+      document.getElementById('profile-content').style.display = 'none';
+      document.getElementById('new-profile-resume').focus();
+    }
+
+    function _closeNewProfileForm() {
+      document.getElementById('new-profile-row').style.display = 'none';
+      document.getElementById('profile-content').style.display = '';
+    }
+
+    document.getElementById('new-profile-btn').addEventListener('click', _openNewProfileForm);
+
+    document.getElementById('new-profile-cancel').addEventListener('click', _closeNewProfileForm);
+
+
+    document.getElementById('new-profile-blank').addEventListener('click', createBlankProfile);
+    document.getElementById('new-profile-generate').addEventListener('click', generateFromResume);
+
+    // ── PDF / txt file upload for resume ─────────────────────────────────────
+    const dropEl = document.getElementById('new-profile-drop');
+    const fileInput = document.getElementById('new-profile-file');
+
+    dropEl.addEventListener('click', () => fileInput.click());
+
+    ['dragover', 'dragenter'].forEach(evt =>
+      dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.add('drag-over'); })
+    );
+    ['dragleave', 'drop'].forEach(evt =>
+      dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.remove('drag-over'); })
+    );
+    dropEl.addEventListener('drop', e => {
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleResumeFile(file);
+    });
+    fileInput.addEventListener('change', e => {
+      if (e.target.files?.[0]) handleResumeFile(e.target.files[0]);
+    });
+
+    async function handleResumeFile(file) {
+      const status = document.getElementById('new-profile-file-status');
+      status.style.color = '#555';
+      status.textContent = 'Reading file…';
+      status.style.display = '';
+      try {
+        if (file.name.endsWith('.pdf') || file.type === 'application/pdf') {
+          const res = await fetch('/api/profile/extract-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/pdf' },
+            body: file,
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            status.style.color = '#f08080';
+            status.textContent = `⚠ ${data.error || 'Could not extract PDF text'} — restart the server and try again`;
+            return;
+          }
+          if (!data.text || !data.text.trim()) {
+            status.style.color = '#f08080';
+            status.textContent = '⚠ PDF appears to be image-based — no text could be extracted. Paste resume text manually.';
+            return;
+          }
+          document.getElementById('new-profile-resume').value = data.text;
+          status.style.color = '#7ee8a2';
+          status.textContent = `✓ Extracted ${data.text.length.toLocaleString()} characters from ${file.name}`;
+          await inferIdentityFromResume(data.text);
+        } else {
+          const text = await file.text();
+          document.getElementById('new-profile-resume').value = text;
+          status.style.color = '#7ee8a2';
+          status.textContent = `✓ Loaded ${file.name}`;
+          await inferIdentityFromResume(text);
+        }
+      } catch (err) {
+        status.style.color = '#f08080';
+        status.textContent = 'Error: ' + err.message;
+      }
+    }
+
+    async function inferIdentityFromResume(resumeText) {
+      const identityEl = document.getElementById('new-profile-identity');
+      identityEl.style.color = '#555';
+      identityEl.textContent = 'Detecting name & email…';
+      identityEl.style.display = '';
+      try {
+        const res = await fetch('/api/profile/infer-identity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resume_text: resumeText }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          identityEl.style.color = '#f08080';
+          identityEl.textContent = `⚠ Could not detect identity: ${data.error || res.statusText}`;
+          return;
+        }
+        _inferredName = data.name || '';
+        _inferredEmail = data.email || '';
+        if (_inferredName || _inferredEmail) {
+          const parts = [_inferredName, _inferredEmail].filter(Boolean);
+          identityEl.style.color = '#7ee8a2';
+          identityEl.textContent = `✓ Detected: ${parts.join(' · ')}`;
+        } else {
+          identityEl.style.color = '#555';
+          identityEl.textContent = 'Could not detect name or email — will generate a generic profile';
+        }
+      } catch (err) {
+        identityEl.style.color = '#f08080';
+        identityEl.textContent = '⚠ Identity detection failed: ' + err.message;
+      }
+    }
+
+    function _newProfileSlug(name) {
+      return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    }
+
+    function _addProfileToSelect(filename, name) {
+      const sel = document.getElementById('profile-select');
+      if (!Array.from(sel.options).some(o => o.value === filename)) {
+        const opt = document.createElement('option');
+        opt.value = filename;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      }
+      sel.value = filename;
+    }
+
+    async function createBlankProfile() {
+      const name = _inferredName || 'New Candidate';
+      const filename = `${_newProfileSlug(name)}_profile.yaml`;
+      const blank = {
+        name, email: _inferredEmail || '',
+        locations: ['SCV'], queries: [], pages_per_query: 3,
+        boost_keywords:   { strong: [], moderate: [], light: [] },
+        penalty_keywords: { hard:   [], soft:   [] },
+        referrer_name: '', referrer_phone: '', referrer_email: '', referral_notes: '',
+      };
+
+      try {
+        const res = await fetch(`/api/profile/${encodeURIComponent(filename)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(blank),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          alert('Could not create profile: ' + (d.error || res.statusText));
+          return;
+        }
+        _addProfileToSelect(filename, name);
+        await loadProfile(filename);
+        _closeNewProfileForm();
+      } catch (err) {
+        alert('Could not create profile: ' + err.message);
+      }
+    }
+
+    async function generateFromResume() {
+      const resumeText = document.getElementById('new-profile-resume').value.trim();
+      if (!resumeText) {
+        const go = confirm('No resume text found — Claude will generate a generic profile without your background. Continue?');
+        if (!go) return;
+      }
+
+      // Infer identity now if the file load didn't already trigger it
+      if (!_inferredName && resumeText) {
+        await inferIdentityFromResume(resumeText);
+      }
+      const name = _inferredName || 'Candidate';
+      const filename = `${_newProfileSlug(name)}_profile.yaml`;
+
+      const genBtn = document.getElementById('new-profile-generate');
+      const genStatus = document.getElementById('new-profile-gen-status');
+      genBtn.disabled = true;
+      genBtn.textContent = 'Generating…';
+      genStatus.textContent = 'Claude is generating a profile…';
+      genStatus.style.color = '#555';
+      genStatus.style.display = '';
+
+      try {
+        const res = await fetch('/api/profile/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, resume_text: resumeText, filename }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          genStatus.textContent = 'Failed: ' + (data.error || res.statusText);
+          genStatus.style.color = '#f08080';
+          return;
+        }
+        _addProfileToSelect(filename, name);
+        currentFile = filename;
+        applyProfile(data.profile);
+        fetchWorkflowInfo(filename);
+        _closeNewProfileForm();
+        refreshGitStatus();
+
+        if (data.explanation) {
+          document.getElementById('results-content').innerHTML = `
+            <div class="ai-banner">
+              <div class="ai-banner-label">Profile Generated by Claude</div>
+              ${esc(data.explanation)}
+            </div>
+            <div class="placeholder" style="padding-top:24px;">
+              Review the profile in the sidebar, then click
+              <strong style="color:#a8d8ff;cursor:pointer;" onclick="runSearch()">Run Search →</strong>
+            </div>`;
+        }
+      } catch (err) {
+        genStatus.textContent = 'Error: ' + err.message;
+        genStatus.style.color = '#f08080';
+      } finally {
+        genBtn.disabled = false;
+        genBtn.textContent = 'Generate with Claude →';
+        setTimeout(() => { genStatus.style.display = 'none'; }, 4000);
+      }
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    function pills(arr, cls) {
+      return (arr || []).map(v => `<span class="pill ${cls}">${esc(String(v))}</span>`).join('');
+    }
+
+    function scoreClass(n) {
+      return n >= 70 ? 'score-g' : n >= 50 ? 'score-a' : 'score-r';
+    }
+
+    function badgeClass(tone) {
+      return tone === 'good' ? 'bg-good' : tone === 'bad' ? 'bg-bad' : 'bg-neu';
+    }
+
+    function jobCard(job) {
+      const badge = job.experienceLevel
+        ? `<span class="exp-badge ${badgeClass(job.levelTone)}">${esc(job.experienceLevel)}</span>`
+        : '';
+      const reasons = (job.detailReasons || []).length
+        ? `<div class="job-reasons">${esc(job.detailReasons.join(', '))}</div>`
+        : '';
+      return `
+        <div class="job-card">
+          <div class="job-score ${scoreClass(job.score)}">${job.score}</div>
+          <div class="job-body">
+            <div class="job-title-row">
+              <a href="${esc(job.url)}" target="_blank" rel="noopener noreferrer" class="job-title-link">${esc(job.title)}</a>
+              ${badge}
+            </div>
+            <div class="job-meta">${esc(job.reqId)} · ${esc(job.team)}</div>
+            <div class="job-meta">${esc(job.location)} · ${esc(job.postingDate)}</div>
+            ${reasons}
+          </div>
+        </div>`;
+    }
+
+    function section(title, sub, jobs, cls, max = 10) {
+      if (!jobs.length) return '';
+      const shown = jobs.slice(0, max);
+      const hidden = jobs.length - shown.length;
+      return `
+        <div class="job-section">
+          <div class="js-title ${cls}">${esc(title)}</div>
+          <div class="js-sub">${esc(sub)}</div>
+          ${shown.map(jobCard).join('')}
+          ${hidden > 0 ? `<div class="trunc-note">Showing top ${max} of ${jobs.length} matches.</div>` : ''}
+        </div>`;
+    }
+
+    // ── Render full results ───────────────────────────────────────────────────
+    function renderResults(d, aiExplanation) {
+      const name = d.candidateName || '';
+      const prof = d.profile || {};
+      const ref  = d.referrer || {};
+      const secs = d.sections || {};
+
+      // Header
+      const byline = ref.name
+        ? `<div class="rh-byline">Curated by ${esc(ref.name)} for ${esc(name)}</div>` : '';
+
+      // Profile summary
+      const allPenalties = [...(prof.penalties?.hard || []), ...(prof.penalties?.soft || [])];
+      const refNotesHtml = prof.referralNotes
+        ? `<div class="ref-notes">
+             <div class="prof-row-label">Referral Notes</div>
+             <p>${esc(prof.referralNotes)}</p>
+           </div>` : '';
+
+      const profSummary = `
+        <div class="prof-row"><div class="prof-row-label">Locations</div><div class="pill-row">${pills(prof.locations, 'pill-loc')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Search Queries</div><div class="pill-row">${pills(prof.queries, 'pill-neu')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Filters</div><div class="pill-row">
+          <span class="pill pill-neu">min score: ${prof.filters?.minScore ?? ''}</span>
+          <span class="pill pill-neu">pages per query: ${prof.filters?.pagesPerQuery ?? ''}</span>
+        </div></div>
+        <div class="prof-row"><div class="prof-row-label">Strong Fit</div><div class="pill-row">${pills(prof.boosts?.strong, 'pill-good')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Moderate Fit</div><div class="pill-row">${pills(prof.boosts?.moderate, 'pill-cau')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Light Boost</div><div class="pill-row">${pills(prof.boosts?.light, 'pill-info')}</div></div>
+        <div class="prof-row"><div class="prof-row-label">Filtered Out</div><div class="pill-row">${pills(allPenalties, 'pill-bad')}</div></div>
+        ${refNotesHtml}
+        <p class="prof-note">This profile was generated collaboratively with AI powered by Claude.</p>`;
+
+      // CTA
+      let ctaHtml = '';
+      if (ref.name) {
+        const link = ref.phone
+          ? `text <a href="sms:${esc(ref.phone)}">${esc(ref.name)}</a>`
+          : esc(ref.name);
+        ctaHtml = `
+          <div class="cta-box">
+            <div class="cta-title">Interested in a role?</div>
+            <div class="cta-text">Apply directly on the jobs site as soon as possible, then ${link} which position(s) you applied to so they can submit a referral on your behalf.</div>
+          </div>`;
+      }
+
+      // Sections
+      const sectionsHtml = [
+        section('Best Fit — Posted Today',      `New listings from ${d.date}`,          secs.today     || [], 'js-today'),
+        section('Best Fit — Posted This Week',  'Listings from the past 7 days',         secs.this_week || [], 'js-week'),
+        section('All Open Positions',           'Older listings still worth a look',      secs.older     || [], 'js-older'),
+      ].filter(Boolean).join('') || '<div class="no-results">No matching roles found this run.</div>';
+
+      const aiBannerHtml = aiExplanation
+        ? `<div class="ai-banner">
+             <div class="ai-banner-label">AI Enhancement — what changed</div>
+             ${esc(aiExplanation)}
+           </div>`
+        : '';
+
+      document.getElementById('results-content').innerHTML = `
+        ${aiBannerHtml}
+        <div class="result-header">
+          <h2>Job Matches for ${esc(name)}</h2>
+          <div class="rh-date">${esc(d.date)}</div>
+          ${byline}
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-n">${d.stats.today}</div><div class="stat-l">Today</div></div>
+            <div class="stat-box"><div class="stat-n">${d.stats.week}</div><div class="stat-l">This Week</div></div>
+            <div class="stat-box"><div class="stat-n">${d.stats.total}</div><div class="stat-l">Total</div></div>
+          </div>
+        </div>
+
+        ${ctaHtml}
+        ${sectionsHtml}`;
+    }
+
+    // ── Progress animation ────────────────────────────────────────────────────
+    let _progressTimer = null;
+
+    function startProgress(candidateName) {
+      document.getElementById('results-content').innerHTML = `
+        <div class="progress-wrap">
+          <div class="progress-name">Searching for ${esc(candidateName || 'candidate')}…</div>
+          <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+        </div>`;
+
+      let pct = 0;
+      const fill = document.getElementById('prog-fill');
+
+      // Quick initial jump then slow crawl toward 88%
+      setTimeout(() => { pct = 4; fill.style.width = pct + '%'; }, 150);
+
+      _progressTimer = setInterval(() => {
+        if (pct < 88) {
+          pct += Math.random() * 0.7 + 0.15;
+          fill.style.width = Math.min(pct, 88) + '%';
+        }
+      }, 600);
+
+    }
+
+    function stopProgress() {
+      clearInterval(_progressTimer);
+      _progressTimer = null;
+      const fill = document.getElementById('prog-fill');
+      if (fill) fill.style.width = '100%';
+    }
+
+    // ── Run search ────────────────────────────────────────────────────────────
+    let searching = false;
+    const runBtn = document.getElementById('run-btn');
+
+    async function runSearch(aiExplanation = '') {
+      if (searching) return;
+      searching = true;
+      runBtn.disabled = true;
+      runBtn.textContent = 'Searching...';
+      startProgress(profile.name);
+
+      try {
+        const res = await fetch('/api/candidate/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile),
+        });
+        const data = await res.json();
+        stopProgress();
+        if (!res.ok) {
+          document.getElementById('results-content').innerHTML =
+            `<div class="error-box">Error: ${esc(data.error || res.statusText)}</div>`;
+          return;
+        }
+        lastSearchedProfile = JSON.parse(JSON.stringify(profile));
+        lastResults = data;
+        updateAiBtn();
+        updateRunBtn();
+        renderResults(data, aiExplanation);
+      } catch (err) {
+        stopProgress();
+        document.getElementById('results-content').innerHTML =
+          `<div class="error-box">Error: ${esc(err.message)}</div>`;
+      } finally {
+        searching = false;
+        runBtn.textContent = 'Run Search →';
+        updateRunBtn();
+      }
+    }
+
+    runBtn.addEventListener('click', () => runSearch());
+
+    // ── AI Enhanced Search ────────────────────────────────────────────────────
+    let lastResults = null;
+    let pendingProfile = null;
+    let pendingExplanation = '';
+
+    const aiBtn = document.getElementById('ai-btn');
+
+    function updateAiBtn() {
+      const hasInput = document.getElementById('f-ai-message').value.trim().length > 0;
+      const enabled = hasInput || !!lastResults;
+      aiBtn.disabled = !enabled;
+      aiBtn.textContent = lastResults ? 'Enhance from Results' : 'Enhance';
+    }
+
+    document.getElementById('f-ai-message').addEventListener('input', updateAiBtn);
+    updateAiBtn();
+
+    // ── Profile diff helpers ──────────────────────────────────────────────────
+    function buildProfileDiff(oldP, newP) {
+      const groups = [];
+      function arrDiff(label, a, b) {
+        a = a || []; b = b || [];
+        const added   = b.filter(x => !a.includes(x));
+        const removed = a.filter(x => !b.includes(x));
+        if (added.length || removed.length) groups.push({ label, added, removed });
+      }
+      arrDiff('Locations',       oldP.locations,                         newP.locations);
+      arrDiff('Search Queries',  oldP.queries,                           newP.queries);
+      const ob = oldP.boost_keywords || {}, nb = newP.boost_keywords || {};
+      arrDiff('Boost — Strong',   ob.strong,   nb.strong);
+      arrDiff('Boost — Moderate', ob.moderate, nb.moderate);
+      arrDiff('Boost — Light',    ob.light,    nb.light);
+      const op = oldP.penalty_keywords || {}, np = newP.penalty_keywords || {};
+      arrDiff('Penalty — Hard',  op.hard,  np.hard);
+      arrDiff('Penalty — Soft',  op.soft,  np.soft);
+      const opq = oldP.pages_per_query || 3, npq = newP.pages_per_query || 3;
+      if (opq !== npq) groups.push({ label: 'Pages per Query', scalar: `${opq} → ${npq}` });
+      return groups;
+    }
+
+    function renderDiffHtml(groups) {
+      if (!groups.length) return '<div class="diff-none">No changes proposed.</div>';
+      return groups.map(g => {
+        let rows = '';
+        if (g.scalar !== undefined) {
+          rows = `<div class="diff-scalar">${esc(g.scalar)}</div>`;
+        } else {
+          rows += g.added.map(x => `<div class="diff-add">+ ${esc(x)}</div>`).join('');
+          rows += g.removed.map(x => `<div class="diff-rm">− ${esc(x)}</div>`).join('');
+        }
+        return `<div class="diff-group"><div class="diff-group-label">${esc(g.label)}</div>${rows}</div>`;
+      }).join('');
+    }
+
+    // ── Staged changes (consent flow) ────────────────────────────────────────
+    function showStagedChanges(explanation, proposedProfile) {
+      pendingProfile = proposedProfile;
+      pendingExplanation = explanation;
+
+      document.getElementById('staged-explain').textContent = explanation;
+      document.getElementById('staged-diff').innerHTML =
+        renderDiffHtml(buildProfileDiff(profile, proposedProfile));
+      document.getElementById('staged-panel').style.display = '';
+      aiBtn.style.display = 'none';
+    }
+
+    function dismissStagedChanges() {
+      pendingProfile = null;
+      pendingExplanation = '';
+      document.getElementById('staged-panel').style.display = 'none';
+      aiBtn.style.display = '';
+    }
+
+    function applyStagedChanges() {
+      if (!pendingProfile) return;
+      applyProfile({ ...loadedRawData, ...pendingProfile });
+      markDirty();
+      dismissStagedChanges();
+    }
+
+    document.getElementById('apply-btn').addEventListener('click', applyStagedChanges);
+    document.getElementById('discard-btn').addEventListener('click', dismissStagedChanges);
+    document.getElementById('staged-close').addEventListener('click', dismissStagedChanges);
+
+    // ── Call /api/ai-enhance, then show staged panel ──────────────────────────
+    async function aiEnhanceAndSearch() {
+      if (searching) return;
+      searching = true;
+      runBtn.disabled = true;
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Thinking…';
+
+      // Show a lightweight progress message (no full progress bar — the real
+      // search runs after the user consents)
+      const content = document.getElementById('results-content');
+      const prev = content.innerHTML;
+      content.innerHTML = `
+        <div class="progress-wrap">
+          <div class="progress-name">Claude is analyzing the profile…</div>
+          <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+        </div>`;
+
+      // Animate the bar toward ~70% while waiting for Claude
+      let pct = 0;
+      const fill = document.getElementById('prog-fill');
+      const fillTimer = setInterval(() => {
+        if (pct < 70) { pct += Math.random() * 1.2 + 0.3; if (fill) fill.style.width = Math.min(pct, 70) + '%'; }
+      }, 400);
+
+      try {
+        const enhanceRes = await fetch('/api/ai-enhance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile,
+            results: lastResults,
+            message: document.getElementById('f-ai-message').value,
+          }),
+        });
+        const enhanceData = await enhanceRes.json();
+        if (!enhanceRes.ok) {
+          const errMsg = enhanceData.error || enhanceRes.statusText;
+          if (errMsg === 'NOT_AUTHENTICATED') {
+            content.innerHTML = prev;
+            document.getElementById('signin-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('signin-btn').style.outline = '1px solid rgba(168,216,255,0.5)';
+            setTimeout(() => document.getElementById('signin-btn').style.outline = '', 2000);
+          } else {
+            content.innerHTML = `<div class="error-box">AI enhancement failed: ${esc(errMsg)}</div>`;
+          }
+          return;
+        }
+        // Restore previous results content while user reviews the proposal
+        content.innerHTML = prev;
+        showStagedChanges(enhanceData.explanation || '', enhanceData.profile);
+      } catch (err) {
+        content.innerHTML = `<div class="error-box">Error: ${esc(err.message)}</div>`;
+      } finally {
+        clearInterval(fillTimer);
+        searching = false;
+        runBtn.disabled = false;
+        aiBtn.disabled = false;
+        updateAiBtn();
+      }
+    }
+
+    aiBtn.addEventListener('click', aiEnhanceAndSearch);
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+    async function checkAuth() {
+      try {
+        const d = await fetch('/api/auth/status').then(r => r.json());
+        const status = document.getElementById('auth-status');
+        if (d.authenticated) {
+          status.textContent = '✓ Using local Claude install';
+          status.className = 'auth-status ok';
+        } else {
+          status.textContent = 'claude CLI not found — install Claude Code to use AI features';
+          status.className = 'auth-status';
+        }
+      } catch (_) {}
+    }
+
+    checkAuth();
+
+    document.getElementById('profile-select').addEventListener('change', e => {
+      if (e.target.value) loadProfile(e.target.value);
+    });
+
+    // ── Schedule / workflow ───────────────────────────────────────────────────
+    // Returns a localized time string for a "minute hour * * *" cron expression,
+    // or null if the expression can't be parsed as a simple daily schedule.
+    function cronToLocalTimeStr(cronExpr) {
+      const parts = (cronExpr || '').trim().split(/\s+/);
+      if (parts.length < 2) return null;
+      const minute = parseInt(parts[0], 10);
+      const hour   = parseInt(parts[1], 10);
+      if (isNaN(minute) || isNaN(hour)) return null;
+      // Build a Date for today at the given UTC hour:minute
+      const d = new Date();
+      d.setUTCHours(hour, minute, 0, 0);
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    }
+
+    function updateCronHint() {
+      const cronVal = document.getElementById('f-cron').value.trim();
+      const hint = document.getElementById('cron-hint');
+      if (cronVal) {
+        const localTime = cronToLocalTimeStr(cronVal);
+        if (localTime) {
+          hint.innerHTML = `Fires daily at <strong style="color:#e8c84a;">${localTime}</strong> &nbsp;— Leave blank to disable.`;
+        } else {
+          hint.textContent = 'Leave blank to disable the schedule.';
+        }
+      } else {
+        const exampleTime = cronToLocalTimeStr('37 20 * * *');
+        const timeStr = exampleTime ? `${exampleTime}` : '12:37 PM PT';
+        hint.innerHTML = `e.g. daily at ${timeStr} = <code style="color:#6cb6ff;">37 20 * * *</code><br>Leave blank to disable the schedule.`;
+      }
+    }
+
+    async function fetchWorkflowInfo(filename) {
+      try {
+        const res = await fetch(`/api/workflow/${encodeURIComponent(filename)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        document.getElementById('schedule-no-workflow').style.display = data.exists ? 'none' : '';
+        document.getElementById('f-cron').value = data.cron || '';
+        updateCronHint();
+      } catch (_) {}
+    }
+
+    document.getElementById('f-cron').addEventListener('input', updateCronHint);
+    updateCronHint();
+
+    document.getElementById('schedule-save-btn').addEventListener('click', saveSchedule);
+
+    async function saveSchedule() {
+      if (!currentFile) return;
+      const cron = document.getElementById('f-cron').value.trim();
+      const btn = document.getElementById('schedule-save-btn');
+      const status = document.getElementById('schedule-status');
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch(`/api/workflow/${encodeURIComponent(currentFile)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cron: cron || '37 20 * * *' }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('schedule-no-workflow').style.display = 'none';
+          status.textContent = 'Saved — deploy to activate';
+          status.style.color = '#7ee8a2';
+          status.style.display = '';
+          setTimeout(() => { status.style.display = 'none'; }, 3000);
+          refreshGitStatus();
+        } else {
+          status.textContent = data.error || 'Save failed';
+          status.style.color = '#f08080';
+          status.style.display = '';
+        }
+      } catch (err) {
+        status.textContent = err.message;
+        status.style.color = '#f08080';
+        status.style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Schedule';
+      }
+    }
+
+    // ── Git status / deploy ───────────────────────────────────────────────────
+    async function refreshGitStatus() {
+      const bar = document.getElementById('git-bar');
+      try {
+        const res = await fetch('/api/git/status');
+        if (!res.ok) { bar.innerHTML = ''; return; }
+        const { changedFiles, commitsAhead } = await res.json();
+
+        if (changedFiles === 0 && commitsAhead === 0) {
+          bar.innerHTML = '<span class="git-ok">✓ deployed</span>';
+        } else {
+          const parts = [];
+          if (changedFiles > 0) parts.push(`${changedFiles} file${changedFiles > 1 ? 's' : ''} modified`);
+          if (commitsAhead > 0) parts.push(`↑ ${commitsAhead} ahead`);
+          bar.innerHTML = `
+            <span class="git-warn">● ${esc(parts.join(', '))}</span>
+            <button class="deploy-btn" id="deploy-btn" onclick="gitDeploy()">Deploy →</button>`;
+        }
+      } catch (_) {
+        bar.innerHTML = '';
+      }
+    }
+
+    async function gitDeploy() {
+      const btn = document.getElementById('deploy-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Deploying…'; }
+      try {
+        const res = await fetch('/api/git/deploy', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('Deploy failed:\n' + (data.output || 'unknown error'));
+        }
+      } catch (err) {
+        alert('Deploy error: ' + err.message);
+      } finally {
+        await refreshGitStatus();
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+      try {
+        const [locsRes, profsRes] = await Promise.all([
+          fetch('/api/locations'),
+          fetch('/api/profiles'),
+        ]);
+        availableLocations = await locsRes.json();
+        const profiles = await profsRes.json();
+
+        const sel = document.getElementById('profile-select');
+        profiles.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f;
+          opt.textContent = f
+            .replace(/_profile\.yaml$/, '')
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+          sel.appendChild(opt);
+        });
+
+        renderLocChips();
+
+        if (profiles.length > 0) {
+          sel.value = profiles[0];
+          await loadProfile(profiles[0]);
+        }
+      } catch (err) {
+        console.warn('Init failed:', err);
+        renderLocChips();
+      }
+      refreshGitStatus();
+    }
+
+    init();
+  </script>
+</body>
+</html>

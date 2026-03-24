@@ -1,0 +1,80 @@
+name: Brooke Ryan
+email: brooke@msbrookesj.com
+locations:
+- SCV
+- SVL
+- SJOS
+queries:
+- software engineer
+- senior software engineer
+- engineering manager
+- site reliability engineer
+- platform engineer
+- infrastructure software engineer
+- cloud infrastructure engineer
+pages_per_query: 10
+boost_keywords:
+  strong:
+  - C
+  - Objective-C
+  - Swift
+  - CoreOS
+  - iCloud
+  - CloudKit
+  - networking
+  moderate:
+  - distributed systems
+  - software update
+  - asset routing
+  - telemetry
+  - infrastructure
+  - server
+  - client
+  - operating systems
+  - Kubernetes
+  - Linux
+  - automation
+  light:
+  - machine learning
+  - AI
+  - performance
+  - diagnostics
+  - mobile
+  - protocols
+  - reliability
+penalty_keywords:
+  hard:
+  - intern
+  - internship
+  - entry level
+  - new grad
+  - junior
+  - retail
+  - store leader
+  - phd
+  - photolithography
+  - laser
+  - data analyst
+  - product manager
+  - program manager
+  soft:
+  - hardware
+  - firmware
+  - electrical
+  - mechanical
+  - RF
+  - IC design
+  - semiconductor
+  - physical design
+  - SoC
+  - analog
+  - prototyping
+  - CNC
+  - design verification
+  - process engineer
+referrer_name: ''
+referrer_phone: ''
+referrer_email: ''
+referral_notes: UCSD CS alumna. 13 years at Apple spanning iCloud Server, iCloud Client,
+  Engineering Management, and CoreOS. Experienced in systems programming (C, Obj-C,
+  Swift, Java), networking, and cloud infrastructure.
