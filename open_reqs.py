@@ -1409,6 +1409,7 @@ def _run_candidate_search_web(profile: dict, limit: int = 50) -> dict:
                     "soft": penalties.get("soft", []),
                 },
                 "referralNotes": profile.get("referral_notes", ""),
+                "referredReqs": [str(r) for r in profile.get("referred_reqs", [])],
             },
             "referrer": {
                 "name": profile.get("referrer_name", ""),

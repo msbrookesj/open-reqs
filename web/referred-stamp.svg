@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 68" width="260" height="68">
+  <defs>
+    <filter id="roughen">
+      <feTurbulence type="turbulence" baseFrequency="0.045" numOctaves="3" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+  <g filter="url(#roughen)" opacity="0.9">
+    <rect x="4" y="4" width="252" height="60" rx="6" ry="6"
+          fill="none" stroke="#c0170f" stroke-width="4"/>
+    <rect x="10" y="10" width="240" height="48" rx="4" ry="4"
+          fill="none" stroke="#c0170f" stroke-width="1.5"/>
+    <text x="130" y="46"
+          font-family="'Arial Black', 'Impact', sans-serif"
+          font-size="36"
+          font-weight="900"
+          letter-spacing="3"
+          text-anchor="middle"
+          fill="#c0170f">REFERRED</text>
+  </g>
+</svg>
