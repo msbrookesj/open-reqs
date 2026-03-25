@@ -81,6 +81,7 @@ def _run_via_claude_cli(prompt: str) -> str:
     result = subprocess.run(
         [_CLAUDE_BIN, "-p", prompt, "--output-format", "json"],
         capture_output=True, text=True, timeout=180,
+        stdin=subprocess.DEVNULL,
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "claude CLI exited with an error")

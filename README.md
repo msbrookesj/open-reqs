@@ -8,8 +8,11 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 
 ```bash
 # 1. Install Claude Code (required for AI features)
+#    Create a free account at https://claude.ai/ if you don't have one.
+#    Sign in with that account below — no API key needed or wanted
+#    (API keys charge per request; the claude.ai account is free/subscription).
 npm install -g @anthropic-ai/claude-code
-claude auth login  # sign in; exits when complete
+claude auth login  # opens browser to sign in with your claude.ai account; exits when complete
 
 # 2. Install Python dependencies
 pip3 install -r requirements.txt
