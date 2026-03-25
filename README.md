@@ -7,7 +7,14 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 ## Quick start
 
 ```bash
+# 1. Install Claude Code (required for AI features)
+npm install -g @anthropic-ai/claude-code
+claude auth login  # sign in; exits when complete
+
+# 2. Install Python dependencies
 pip3 install -r requirements.txt
+
+# 3. Start the web UI
 python open_reqs.py --serve
 # Then open http://localhost:8080
 ```
