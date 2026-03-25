@@ -19,7 +19,7 @@ claude auth login  # opens browser to sign in with your claude.ai account; exits
 pip3 install -r requirements.txt
 
 # 3. Start the web UI
-python open_reqs.py --serve
+python3 open_reqs.py --serve
 # Then open http://localhost:8080
 ```
 
@@ -27,7 +27,7 @@ python open_reqs.py --serve
 
 ## Web UI
 
-Run `python open_reqs.py --serve` to start a local proxy server. The UI is a two-column layout: a profile editor sidebar on the left and a scored results panel on the right.
+Run `python3 open_reqs.py --serve` to start a local proxy server. The UI is a two-column layout: a profile editor sidebar on the left and a scored results panel on the right.
 
 ### Profile editor (sidebar)
 
@@ -76,16 +76,16 @@ Run a multi-query, scored, deduplicated search from the command line.
 
 ```bash
 # Use the default profile (candidate_profile.yaml)
-python open_reqs.py --candidate
+python3 open_reqs.py --candidate
 
 # Use a specific profile
-python open_reqs.py --candidate --profile profiles/brooke_ryan_profile.yaml
+python3 open_reqs.py --candidate --profile profiles/brooke_ryan_profile.yaml
 
 # Limit results and export JSON
-python open_reqs.py --candidate --limit 50 --json
+python3 open_reqs.py --candidate --limit 50 --json
 
 # Send results as an HTML email digest
-python open_reqs.py --candidate --email user@example.com --cc contact@example.com
+python3 open_reqs.py --candidate --email user@example.com --cc contact@example.com
 ```
 
 ### Candidate profiles
