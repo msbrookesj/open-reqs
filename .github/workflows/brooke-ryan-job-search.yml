@@ -61,17 +61,3 @@ jobs:
           fi
           python3 open_reqs.py --profile profiles/brooke_ryan_profile.yaml --from-json results.json --email "$EMAIL" --cc "${{ steps.profile.outputs.referrer_email }}"
 
-      - name: Upload results artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: job-results
-          path: results.json
-          retention-days: 7
-
-      - name: Upload email digest artifact
-        if: ${{ github.event.inputs.email_to != 'none' || github.event_name == 'schedule' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: email-digest
-          path: email_digest.html
-          retention-days: 7
