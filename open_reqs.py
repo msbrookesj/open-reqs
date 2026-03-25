@@ -771,7 +771,7 @@ def _score_color(score: int) -> str:
     return "#cf222e"  # red
 
 
-def _job_html_card(job: dict) -> str:
+def _job_html_card(job: dict, referred_reqs: set[str] | None = None) -> str:
     """Render one job as a mobile-friendly card."""
     req_id = job.get("positionId") or job.get("id") or "—"
     title = job.get("postingTitle") or job.get("title") or "Untitled"
@@ -803,6 +803,10 @@ def _job_html_card(job: dict) -> str:
         cls = _BADGE_CLASSES[level_tone[exp]]
         badge = f' <span class="{cls}" style="padding:2px 6px;border-radius:4px;font-size:11px;">{exp}</span>'
 
+    referred_badge = ""
+    if referred_reqs and str(req_id) in referred_reqs:
+        referred_badge = ' <span class="badge-referred" style="padding:2px 6px;border-radius:4px;font-size:11px;">referred</span>'
+
     reasons_html = ""
     if reasons:
         reasons_html = f'<div class="muted" style="font-size:12px;margin-top:4px;">{", ".join(reasons)}</div>'
@@ -813,7 +817,7 @@ def _job_html_card(job: dict) -> str:
       <span style="font-weight:bold;font-size:18px;color:{_score_color(score)};">{score}</span>
     </div>
     <div style="flex:1;min-width:0;">
-      <a href="{url}" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">{title}</a>{badge}
+      <a href="{url}" class="job-link" style="text-decoration:none;font-weight:600;font-size:15px;word-wrap:break-word;">{title}</a>{badge}{referred_badge}
       <div class="muted" style="font-size:13px;margin-top:2px;">{req_id} &middot; {team}</div>
       <div class="muted" style="font-size:13px;margin-top:2px;">{location} &middot; {date_str}</div>
       {reasons_html}
@@ -823,13 +827,13 @@ def _job_html_card(job: dict) -> str:
 
 
 def _section_html(title: str, subtitle: str, jobs: list[dict], accent_class: str,
-                   max_jobs: int = 10) -> str:
+                   max_jobs: int = 10, referred_reqs: set[str] | None = None) -> str:
     """Render a section (Today / This Week / All Open) as HTML."""
     if not jobs:
         return ""
     display_jobs = jobs[:max_jobs]
     hidden = len(jobs) - len(display_jobs)
-    cards = "\n".join(_job_html_card(j) for j in display_jobs)
+    cards = "\n".join(_job_html_card(j, referred_reqs) for j in display_jobs)
     truncation_note = ""
     if hidden > 0:
         truncation_note = f'<p style="margin:10px 0 0 0;font-size:12px;font-style:italic;" class="muted">Showing top {max_jobs} of {len(jobs)} matches.</p>'
@@ -846,6 +850,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
     """Build a complete HTML email from scored job results."""
     buckets = _categorize_jobs(jobs)
     today_date = datetime.now(ZoneInfo("America/Los_Angeles")).strftime("%B %d, %Y")
+    referred_reqs = {str(r) for r in CANDIDATE_PROFILE.get("referred_reqs", [])}
 
     sections = []
     sections.append(_section_html(
@@ -853,18 +858,21 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
         f"New listings from {today_date}",
         buckets["today"],
         "accent-green",
+        referred_reqs=referred_reqs,
     ))
     sections.append(_section_html(
         "Best Fit — Posted This Week",
         "Listings from the past 7 days",
         buckets["this_week"],
         "accent-blue",
+        referred_reqs=referred_reqs,
     ))
     sections.append(_section_html(
         "All Open Positions",
         "Older listings still worth a look",
         buckets["older"],
         "accent-gray",
+        referred_reqs=referred_reqs,
     ))
 
     body_sections = "\n".join(s for s in sections if s)
@@ -969,6 +977,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
     .badge-good {{ background:#dafbe1; color:#1a7f37; }}
     .badge-caution {{ background:#fff8c5; color:#9a6700; }}
     .badge-bad {{ background:#ffebe9; color:#cf222e; }}
+    .badge-referred {{ background:#e8e0f0; color:#6639a6; }}
     .accent-green {{ color:#1a7f37; }}
     .accent-blue {{ color:#0969da; }}
     .accent-gray {{ color:#656d76; }}
@@ -995,6 +1004,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
       .badge-good {{ background:#1a3d2a; color:#7ee8a2; }}
       .badge-caution {{ background:#3d3520; color:#e8c84a; }}
       .badge-bad {{ background:#3d1a1a; color:#f08080; }}
+      .badge-referred {{ background:#3b2d5e; color:#c4a8e8; }}
       .accent-green {{ color:#3fb950; }}
       .accent-blue {{ color:#6cb6ff; }}
       .accent-gray {{ color:#a1a1a6; }}
