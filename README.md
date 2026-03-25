@@ -12,6 +12,7 @@ Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, 
 #    Sign in with that account below — no API key needed or wanted
 #    (API keys charge per request; the claude.ai account is free/subscription).
 npm install -g @anthropic-ai/claude-code
+export PATH="$(npm prefix -g)/bin:$PATH"  # ensure claude is on PATH in this session
 claude auth login  # opens browser to sign in with your claude.ai account; exits when complete
 
 # 2. Install Python dependencies
