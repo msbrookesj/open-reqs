@@ -537,7 +537,18 @@
       align-items: flex-start;
       transition: border-color 0.15s;
     }
+    .job-card { position: relative; }
     .job-card:hover { border-color: rgba(255,255,255,0.18); }
+    .referred-stamp {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-12deg);
+      width: 130px;
+      opacity: 0.55;
+      pointer-events: none;
+      user-select: none;
+    }
     .job-score {
       min-width: 34px;
       text-align: center;
@@ -1125,6 +1136,7 @@
     }
 
     async function loadProfile(filename) {
+      runBtn.disabled = true;
       try {
         const r = await fetch(`/api/profile/${encodeURIComponent(filename)}`);
         if (r.ok) {
@@ -1133,6 +1145,9 @@
           fetchWorkflowInfo(filename);
         }
       } catch (_) {}
+      finally {
+        updateRunBtn();
+      }
     }
 
     // ── Save profile ──────────────────────────────────────────────────────────
@@ -1458,6 +1473,9 @@
       const reasons = (job.detailReasons || []).length
         ? `<div class="job-reasons">${esc(job.detailReasons.join(', '))}</div>`
         : '';
+      const stamp = referredReqIds.has(String(job.reqId))
+        ? `<img class="referred-stamp" src="/referred-stamp.svg" alt="Referred" aria-label="Already referred">`
+        : '';
       return `
         <div class="job-card">
           <div class="job-score ${scoreClass(job.score)}">${job.score}</div>
@@ -1470,6 +1488,7 @@
             <div class="job-meta">${esc(job.location)} · ${esc(job.postingDate)}</div>
             ${reasons}
           </div>
+          ${stamp}
         </div>`;
     }
 
@@ -1492,6 +1511,7 @@
       const prof = d.profile || {};
       const ref  = d.referrer || {};
       const secs = d.sections || {};
+      referredReqIds = new Set(prof.referredReqs || []);
 
       // Header
       const byline = ref.name
@@ -1596,21 +1616,31 @@
     }
 
     // ── Run search ────────────────────────────────────────────────────────────
+    let referredReqIds = new Set();
     let searching = false;
+    let searchAbortController = null;
     const runBtn = document.getElementById('run-btn');
+
+    function cancelSearch() {
+      if (searching && searchAbortController) {
+        searchAbortController.abort();
+      }
+    }
 
     async function runSearch(aiExplanation = '') {
       if (searching) return;
       searching = true;
-      runBtn.disabled = true;
-      runBtn.textContent = 'Searching...';
+      runBtn.disabled = false;
+      runBtn.textContent = 'Cancel';
       startProgress(profile.name);
+      searchAbortController = new AbortController();
 
       try {
         const res = await fetch('/api/candidate/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(profile),
+          body: JSON.stringify({ ...loadedRawData, ...profile }),
+          signal: searchAbortController.signal,
         });
         const data = await res.json();
         stopProgress();
@@ -1626,16 +1656,19 @@
         renderResults(data, aiExplanation);
       } catch (err) {
         stopProgress();
-        document.getElementById('results-content').innerHTML =
-          `<div class="error-box">Error: ${esc(err.message)}</div>`;
+        if (err.name !== 'AbortError') {
+          document.getElementById('results-content').innerHTML =
+            `<div class="error-box">Error: ${esc(err.message)}</div>`;
+        }
       } finally {
         searching = false;
+        searchAbortController = null;
         runBtn.textContent = 'Run Search →';
         updateRunBtn();
       }
     }
 
-    runBtn.addEventListener('click', () => runSearch());
+    runBtn.addEventListener('click', () => searching ? cancelSearch() : runSearch());
 
     // ── AI Enhanced Search ────────────────────────────────────────────────────
     let lastResults = null;
@@ -1803,7 +1836,7 @@
     checkAuth();
 
     document.getElementById('profile-select').addEventListener('change', e => {
-      if (e.target.value) loadProfile(e.target.value);
+      if (e.target.value) { cancelSearch(); loadProfile(e.target.value); }
     });
 
     // ── Schedule / workflow ───────────────────────────────────────────────────
