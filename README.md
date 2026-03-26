@@ -173,3 +173,9 @@ pip3 install -r requirements.txt
 | `pypdf` | PDF text extraction in the **+ New** profile form |
 
 If `pypdf` is not installed, PDF upload in the new-profile form returns an error; paste-text still works. All other features are unaffected.
+
+---
+
+## Authorship
+
+100% of the code in this project was written by Claude through directed prompting by Brooke Ryan.
