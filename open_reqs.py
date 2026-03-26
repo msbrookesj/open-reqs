@@ -59,12 +59,6 @@ from pathlib import Path
 import yaml
 
 try:
-    import anthropic as _anthropic
-    _ANTHROPIC_AVAILABLE = True
-except ImportError:
-    _ANTHROPIC_AVAILABLE = False
-
-try:
     import pypdf as _pypdf
     _PYPDF_AVAILABLE = True
 except ImportError:
@@ -1911,10 +1905,6 @@ def run_server(port: int):
         def log_message(self, format, *args):
             if "/api/" in str(args):
                 print(f"  [proxy] {args[0]}")
-
-    if not _ANTHROPIC_AVAILABLE:
-        print("  Note: 'anthropic' package not found — AI Enhanced Search will be unavailable.")
-        print("  Install with: pip3 install anthropic  (or: pip3 install -r requirements.txt)\n")
 
     # Check claude CLI
     if not _CLAUDE_BIN:
