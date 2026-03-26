@@ -1,6 +1,6 @@
 # open-reqs
 
-Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, deduplicated candidate searches from the command line or a local web UI — no scraping, no third-party services. 100% of the code is written by Claude through directed prompting by Brooke Ryan.
+Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, deduplicated candidate searches from the command line or a local web UI — no scraping, no third-party services. 100% of the code is written by Claude through directed prompting by Brooke Ryan, using a personal [Claude Max](https://claude.ai/upgrade) plan.
 
 ---
 
