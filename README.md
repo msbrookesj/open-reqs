@@ -1,6 +1,6 @@
 # open-reqs
 
-Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, deduplicated candidate searches from the command line or a local web UI — no scraping, no third-party services.
+Tool for searching open job reqs on `jobs.apple.com`. Runs multi-query, scored, deduplicated candidate searches from the command line or a local web UI — no scraping, no third-party services. 100% of the code is written by Claude through directed prompting by Brooke Ryan.
 
 ---
 
@@ -173,9 +173,3 @@ pip3 install -r requirements.txt
 | `pypdf` | PDF text extraction in the **+ New** profile form |
 
 If `pypdf` is not installed, PDF upload in the new-profile form returns an error; paste-text still works. All other features are unaffected.
-
----
-
-## Authorship
-
-100% of the code in this project was written by Claude through directed prompting by Brooke Ryan.
