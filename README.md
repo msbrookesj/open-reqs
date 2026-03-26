@@ -169,7 +169,6 @@ pip3 install -r requirements.txt
 | Package | Required for |
 |---------|-------------|
 | `pyyaml` | Candidate profile mode (`--candidate`, `--serve`) |
-| `anthropic` | (unused; retained for legacy imports) |
 | `pypdf` | PDF text extraction in the **+ New** profile form |
 
 If `pypdf` is not installed, PDF upload in the new-profile form returns an error; paste-text still works. All other features are unaffected.
