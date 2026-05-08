@@ -1,0 +1,88 @@
+name: Austin Marshall
+email: oxtopus@gmail.com
+locations:
+- SCV
+- SVL
+- SJOS
+queries:
+- Machine Learning Engineer
+- AIML
+- Data Engineer
+- Software Engineer Python
+- ML Infrastructure
+- Platform Engineer
+pages_per_query: 3
+boost_keywords:
+  strong:
+  - Python
+  - AWS
+  - machine learning
+  - MLOps
+  - NumPy
+  - Pandas
+  - scikit-learn
+  - PyArrow
+  - Metaflow
+  - scientific computing
+  - EC2
+  - ECS
+  - s3
+  - RDS
+  - DynamoDB
+  - distributed systems
+  - feature engineering
+  - CI/CD
+  moderate:
+  - PostgreSQL
+  - MySQL
+  - Docker
+  - Terraform
+  - data pipeline
+  - pydantic
+  - RESTful API
+  - Nginx
+  - RabbitMQ
+  - build automation
+  - workflow orchestration
+  - batch processing
+  - observability
+  - monitoring
+  light:
+  - AIML
+  - Health
+  - Siri
+  - Core ML
+  - Cloud Services
+  - Fargate
+  - C++
+  - genomics
+  - phenotypic data
+  - anomaly detection
+  - streaming
+  - load balancing
+penalty_keywords:
+  hard:
+  - junior
+  - entry level
+  - intern
+  - new grad
+  - early career
+  soft:
+  - iOS
+  - Swift
+  - Objective-C
+  - frontend
+  - mobile engineer
+  - Android
+  - UX designer
+  - QA engineer
+  - firmware
+  - hardware
+referrer_name: ''
+referrer_phone: ''
+referrer_email: ''
+referral_notes: Staff/Tech Lead software engineer with 20+ years of experience. Deep
+  expertise in Python, AWS, MLOps, scientific computing (NumPy, Pandas, scikit-learn),
+  and distributed systems. Co-inventor on ML patent for polygenic risk score models.
+  Built and scaled ML training pipelines, feature engineering services, and longitudinal
+  ML monitoring at 23andMe. Based in Los Gatos, CA — minutes from Apple HQ.
