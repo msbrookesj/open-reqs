@@ -67,8 +67,19 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).parent
 PROFILES_DIR = SCRIPT_DIR / "profiles"
 
-# ── Local claude CLI ──────────────────────────────────────────────────────────
+# ── Local AI CLI ────────────────────────────────────────────────────────────
 _CLAUDE_BIN: str | None = shutil.which("claude")
+_OPENCODE_BIN: str | None = shutil.which("opencode")
+
+# Determine AI provider: env var AI_PROVIDER, or auto (claude > opencode)
+_AI_PROVIDER = os.environ.get("AI_PROVIDER", "").lower()
+if _AI_PROVIDER not in ("claude", "opencode"):
+    if _CLAUDE_BIN:
+        _AI_PROVIDER = "claude"
+    elif _OPENCODE_BIN:
+        _AI_PROVIDER = "opencode"
+    # else stays empty string
+_AI_BIN = _CLAUDE_BIN if _AI_PROVIDER == "claude" else _OPENCODE_BIN
 
 def _run_via_claude_cli(prompt: str) -> str:
     """Send a prompt to the locally installed claude CLI and return the response text."""
@@ -83,6 +94,41 @@ def _run_via_claude_cli(prompt: str) -> str:
     if data.get("is_error"):
         raise RuntimeError(data.get("result", "claude CLI returned an error"))
     return data["result"]
+
+def _run_via_opencode_cli(prompt: str) -> str:
+    """Send a prompt to the locally installed opencode CLI and return the response text."""
+    result = subprocess.run(
+        [_OPENCODE_BIN, "run", "--format", "json", prompt],
+        capture_output=True, text=True, timeout=180,
+        stdin=subprocess.DEVNULL,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "opencode CLI exited with an error")
+    # Parse NDJSON output; collect text from "text" type events
+    parts = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "text":
+            parts.append(event.get("part", {}).get("text", ""))
+    text = "\n".join(parts)
+    if not text:
+        raise RuntimeError("opencode CLI returned no text")
+    return text
+
+def _run_via_ai_cli(prompt: str) -> str:
+    """Send a prompt to the active AI CLI (claude or opencode) and return the response text."""
+    if not _AI_BIN:
+        raise RuntimeError("NOT_AUTHENTICATED")
+    if _AI_PROVIDER == "opencode":
+        return _run_via_opencode_cli(prompt)
+    else:
+        return _run_via_claude_cli(prompt)
 
 # ── GitHub Actions workflow template ──────────────────────────────────────────
 # Uses @@PLACEHOLDER@@ markers; substituted via .replace() to avoid conflicts
@@ -224,11 +270,11 @@ def _write_workflow(profile_filename: str, profile: dict, cron: str) -> None:
 
 
 def _infer_identity_from_resume(resume_text: str) -> dict:
-    """Use the Claude CLI to extract the candidate's name and email from resume text.
+    """Use the AI CLI to extract the candidate's name and email from resume text.
 
     Returns {"name": str, "email": str} — empty strings if not found.
     """
-    if not _CLAUDE_BIN:
+    if not _AI_BIN:
         raise RuntimeError("NOT_AUTHENTICATED")
 
     prompt = (
@@ -239,7 +285,7 @@ def _infer_identity_from_resume(resume_text: str) -> dict:
         f"Resume:\n{resume_text[:4000]}"
     )
 
-    text = _run_via_claude_cli(prompt).strip()
+    text = _run_via_ai_cli(prompt).strip()
     m = re.search(r'\{[^{}]*"name"[^{}]*\}', text, re.DOTALL)
     if not m:
         raise ValueError(f"No JSON object found in response: {text[:200]}")
@@ -248,11 +294,11 @@ def _infer_identity_from_resume(resume_text: str) -> dict:
 
 
 def _generate_profile_from_resume(name: str, resume_text: str) -> dict:
-    """Use the Claude CLI to generate a candidate profile from a name and resume text.
+    """Use the AI CLI to generate a candidate profile from a name and resume text.
 
     Returns a dict with keys: explanation, profile.
     """
-    if not _CLAUDE_BIN:
+    if not _AI_BIN:
         raise RuntimeError("NOT_AUTHENTICATED")
 
     loc_list = ", ".join(f"{k} ({v['label']})" for k, v in LOCATIONS.items())
@@ -304,7 +350,7 @@ Respond with ONLY a valid JSON object (no markdown, no extra text):
   }}
 }}"""
 
-    text = _run_via_claude_cli(prompt).strip()
+    text = _run_via_ai_cli(prompt).strip()
     if text.startswith("```"):
         text = re.sub(r"^```[^\n]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
@@ -1052,7 +1098,7 @@ def build_email_html(jobs: list[dict], candidate_name: str) -> str:
         <h4 style="margin:0 0 10px 0;font-size:14px;" class="body-text">Candidate Profile: {profile.get('name', candidate_name)}</h4>
         {profile_pills}
         {referral_notes_html}
-        <p style="margin:10px 0 0 0;font-size:11px;font-style:italic;" class="muted">This profile was generated collaboratively with AI powered by Claude.</p>
+        <p style="margin:10px 0 0 0;font-size:11px;font-style:italic;" class="muted">This profile was generated collaboratively with AI.</p>
       </div>
     </details>
 
@@ -1556,13 +1602,13 @@ def send_email_from_json(json_path: str, email_to: str,
 
 
 def _ai_enhance_profile(profile: dict, results: dict | None, message: str) -> dict:
-    """Use Claude to evaluate search results and suggest profile improvements.
+    """Use AI to evaluate search results and suggest profile improvements.
 
     Returns a dict with keys:
       explanation  — human-readable summary of changes made
       profile      — updated profile dict
     """
-    if not _CLAUDE_BIN:
+    if not _AI_BIN:
         raise RuntimeError("NOT_AUTHENTICATED")
 
     # Build a compact results summary to keep tokens down
@@ -1644,7 +1690,7 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no extr
   }}
 }}"""
 
-    text = _run_via_claude_cli(prompt).strip()
+    text = _run_via_ai_cli(prompt).strip()
 
     # Strip any accidental markdown fences
     if text.startswith("```"):
@@ -1723,7 +1769,10 @@ def run_server(port: int):
 
             # ── Auth ───────────────────────────────────────────────────────────
             elif self.path == "/api/auth/status":
-                self._json_ok({"authenticated": bool(_CLAUDE_BIN)})
+                self._json_ok({
+                    "authenticated": bool(_AI_BIN),
+                    "provider": _AI_PROVIDER or "none",
+                })
 
             # ── Workflow info ──────────────────────────────────────────────────
             elif self.path.startswith("/api/workflow/"):
@@ -1906,11 +1955,11 @@ def run_server(port: int):
             if "/api/" in str(args):
                 print(f"  [proxy] {args[0]}")
 
-    # Check claude CLI
-    if not _CLAUDE_BIN:
-        print("  Warning: 'claude' command not found — AI Enhanced Search will be unavailable.")
-        print("  Install Claude Code: https://claude.ai/download\n")
-    else:
+    # Check AI CLI availability
+    if not _AI_BIN:
+        print("  Warning: no AI CLI found — AI Enhanced Search will be unavailable.")
+        print("  Install Claude Code (https://claude.ai/download) or OpenCode (https://opencode.ai)\n")
+    elif _AI_PROVIDER == "claude":
         version = subprocess.run([_CLAUDE_BIN, "--version"], capture_output=True, text=True).stdout.strip()
         claude_json = Path.home() / ".claude.json"
         authed = False
@@ -1920,19 +1969,21 @@ def run_server(port: int):
             except Exception:
                 pass
         if authed:
-            print(f"  Claude Code: {version} ✓")
+            print(f"  AI Provider: Claude Code {version} ✓")
         else:
-            print(f"  Claude Code: {version} — not signed in. Opening sign-in…")
+            print(f"  AI Provider: Claude Code {version} — not signed in. Opening sign-in…")
             subprocess.run([_CLAUDE_BIN, "auth", "login"], check=False)
-            # Re-check after login attempt
             try:
                 authed = bool(json.loads(claude_json.read_text()).get("oauthAccount"))
             except Exception:
                 pass
             if authed:
-                print("  Claude Code: signed in ✓")
+                print("  AI Provider: Claude Code signed in ✓")
             else:
                 print("  Warning: sign-in may not have completed — AI Enhanced Search may be unavailable.\n")
+    else:  # opencode
+        version = subprocess.run([_OPENCODE_BIN, "--version"], capture_output=True, text=True).stdout.strip()
+        print(f"  AI Provider: OpenCode {version} ✓")
 
     with socketserver.TCPServer(("", port), ProxyHandler) as httpd:
         print(f"\n  Job Search running at http://localhost:{port}")

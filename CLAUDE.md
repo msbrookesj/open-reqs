@@ -19,7 +19,7 @@ Key functions:
 | `score_job(job)` | First-pass scoring using title/team/summary vs. profile keywords |
 | `second_pass_score(detail)` | Second-pass scoring using full job text + experience-level signals |
 | `_run_candidate_search_web(profile, limit)` | Full two-pass search for the web UI — returns categorized JSON |
-| `_ai_enhance_profile(profile, results, message)` | Calls Claude Opus to propose profile improvements |
+| `_ai_enhance_profile(profile, results, message)` | Calls AI to propose profile improvements |
 | `build_email_html(jobs, candidate_name)` | Builds the HTML email digest |
 | `run_candidate_search(...)` | CLI candidate search — prints or emails results |
 | `run_server(port)` | Starts the local proxy server with `ProxyHandler` |
@@ -38,7 +38,7 @@ Key JS components:
 - **`showStagedChanges` / `applyStagedChanges` / `dismissStagedChanges`** — consent flow for AI proposals
 - **`buildProfileDiff` / `renderDiffHtml`** — generates the field-by-field diff shown in the staged panel
 - **`updateAiBtn()`** — enables/disables and relabels the Enhance button based on whether results exist and whether feedback was typed
-- **`generateFromResume()` / `createBlankProfile()`** — new-profile form: calls `/api/profile/generate` (Claude CLI) or creates a blank YAML; POSTs to `/api/profile/<file>` and loads the result
+- **`generateFromResume()` / `createBlankProfile()`** — new-profile form: calls `/api/profile/generate` (AI CLI) or creates a blank YAML; POSTs to `/api/profile/<file>` and loads the result
 - **`handleResumeFile(file)`** — reads a dropped/selected PDF or .txt file; POSTs to `/api/profile/extract-pdf` for PDFs, reads directly for .txt; populates the resume textarea
 - **`fetchWorkflowInfo(filename)`** — GETs `/api/workflow/<file>`, populates the cron field and calls `updateCronHint()`
 - **`cronToLocalTimeStr(cronExpr)` / `updateCronHint()`** — parses a `minute hour * * *` expression and displays the equivalent local time using `Date.toLocaleTimeString()`; updates live as the user types
@@ -54,12 +54,12 @@ Key JS components:
 | GET | `/api/profiles` | Lists `*_profile.yaml` files in repo root |
 | GET | `/api/profile/<file>` | Returns parsed YAML for a profile |
 | PUT | `/api/profile/<file>` | Writes updated profile to disk |
-| POST | `/api/profile/generate` | Generates a new profile YAML from resume text via Claude CLI |
+| POST | `/api/profile/generate` | Generates a new profile YAML from resume text via AI CLI |
 | POST | `/api/profile/extract-pdf` | Extracts text from an uploaded PDF (requires `pypdf`) |
 | GET | `/api/workflow/<file>` | Returns `{exists, cron}` for the associated GitHub Actions workflow |
 | PUT | `/api/workflow/<file>` | Patches the cron expression in (or creates) the workflow file |
 | POST | `/api/candidate/search` | Runs full candidate search, returns categorized JSON |
-| POST | `/api/ai-enhance` | Calls Claude to propose profile improvements |
+| POST | `/api/ai-enhance` | Calls AI to propose profile improvements |
 | POST | `/api/role/search` | Single-query search (legacy) |
 | GET | `/api/git/status` | Returns `{changedFiles, commitsAhead}` for profile/workflow files |
 | POST | `/api/git/deploy` | Stages profile YAMLs + workflow files, commits, pushes to `origin/main` |
@@ -97,10 +97,15 @@ Both the web search (`_run_candidate_search_web`) and the CLI search (`run_candi
 
 ## AI Enhancement
 
-All Claude calls go through `_run_via_claude_cli(prompt)` — a subprocess wrapper that invokes the local `claude` CLI (`claude -p --output-format json`). No Anthropic SDK dependency at runtime.
+All AI calls go through `_run_via_ai_cli(prompt)` — a unified dispatcher that sends prompts to the configured AI CLI. Supports both `claude` (`claude -p --output-format json`) and `opencode` (`opencode run --format json <prompt>`). Set `AI_PROVIDER=claude` or `AI_PROVIDER=opencode` to force a specific provider; otherwise auto-detects (Claude preferred).
 
+- **`_run_via_claude_cli(prompt)`** — invokes the local `claude` CLI; parses the single JSON response
+- **`_run_via_opencode_cli(prompt)`** — invokes the local `opencode` CLI; parses NDJSON text events
 - **`_ai_enhance_profile(profile, results, message)`** — sends a compact profile summary + up to 30 top job results + optional user feedback; expects `{explanation, profile}` JSON back
 - **`_generate_profile_from_resume(name, resume_text)`** — sends name + resume text; expects a fully populated profile YAML dict + explanation
+- **`_infer_identity_from_resume(resume_text)`** — extracts name + email from resume text; returns `{name, email}`
+
+The `/api/auth/status` endpoint returns `{authenticated, provider}` so the frontend can display which AI is active.
 
 ## Workflow management
 
